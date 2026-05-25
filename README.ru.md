@@ -67,7 +67,7 @@ S.W.A.R.M. — самохостируемая децентрализованна
 ### Bootstrap узел (VPS)
 
 ```bash
-git clone https://github.com/narodnaya-set/swarm
+git clone https://github.com/Rockenrol2017/swarm
 cd swarm
 
 # Сборка

@@ -67,7 +67,7 @@ No need to install anything on each device.
 ### Bootstrap node (VPS)
 
 ```bash
-git clone https://github.com/narodnaya-set/swarm
+git clone https://github.com/Rockenrol2017/swarm
 cd swarm
 
 # Build
