@@ -1,12 +1,34 @@
 # S.W.A.R.M.
 ### Secure · Worldwide · Anonymous · Routing · Mesh
 
-> Децентрализованная P2P сеть для приватности и безопасности.
-> Чем больше участников — тем сильнее и надёжнее.
+> Децентрализованная P2P зашифрованная меш-сеть.  
+> **Чем больше узлов — тем быстрее и надёжнее сеть для всех.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.22+-blue.svg)](https://golang.org)
 [![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+---
+
+## 🌍 Запусти узел — помоги сети
+
+> **Есть VPS? Одна команда — и ты часть роя.**
+
+Каждый bootstrap узел делает всю сеть быстрее и надёжнее для каждого участника.  
+Никакой настройки. Никакого обслуживания. Запустил и забыл.
+
+```bash
+curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install/setup-bootstrap.sh | bash
+```
+
+**Требования:** Linux VPS (любой хостинг) · Root доступ · Порт 7437/UDP открыт · ~50 МБ RAM
+
+Скрипт автоматически установит Go, соберёт узел, настроит systemd и откроет порты в файрволе.  
+Через ~2 минуты твой узел работает и обслуживает рой. 🎉
+
+> 💡 **Чем разнообразнее география узлов — тем лучше.**  
+> Франкфурт, Хельсинки, Сингапур, Нью-Йорк — каждая локация важна.
 
 ---
 

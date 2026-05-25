@@ -1,12 +1,34 @@
 # S.W.A.R.M.
 ### Secure · Worldwide · Anonymous · Routing · Mesh
 
-> A decentralized peer-to-peer network built for privacy and security.
-> The more participants — the stronger and more resilient it becomes.
+> A decentralized peer-to-peer encrypted mesh network.  
+> **The more nodes — the faster and stronger the network for everyone.**
 
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.22+-blue.svg)](https://golang.org)
 [![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
+
+---
+
+## 🌍 Run a Node — Help the Network
+
+> **Got a VPS? One command is all it takes.**
+
+Every bootstrap node you run makes the entire swarm faster and more reliable for everyone.  
+No configuration needed. No maintenance. Just run and forget.
+
+```bash
+curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install/setup-bootstrap.sh | bash
+```
+
+**Requirements:** Linux VPS (any provider) · Root access · Port 7437/UDP open · ~50 MB RAM
+
+The script automatically installs Go, builds the node, sets up systemd, and opens firewall ports.  
+After ~2 minutes your node is running and serving the swarm. 🎉
+
+> 💡 **The more geographically diverse the nodes — the better.**  
+> Frankfurt, Helsinki, Singapore, New York — every location helps.
 
 ---
 
@@ -64,28 +86,14 @@ No need to install anything on each device.
 - Go 1.22+
 - Root access (for TPROXY)
 
-### Bootstrap node (VPS)
+### Bootstrap node (VPS) — one command
 
 ```bash
-git clone https://github.com/Rockenrol2017/swarm
-cd swarm
-
-# Build
-go build -o swarm-node ./cmd/swarm-node/
-
-# Configure
-cat > /etc/swarm/node-config.json << EOF
-{
-  "mode": "bootstrap",
-  "listen_addr": ":7437",
-  "status_addr": ":19090",
-  "identity_file": "/etc/swarm/identity.json"
-}
-EOF
-
-# Run
-sudo ./swarm-node -config /etc/swarm/node-config.json
+curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install/setup-bootstrap.sh | bash
 ```
+
+The script handles everything: Go installation, build, config, systemd service, firewall rules.  
+At the end it prints your node's IP and NodeID — share them to help others connect.
 
 ### Client node (home server)
 
@@ -214,13 +222,17 @@ See [SECURITY.md](SECURITY.md) for details.
 
 ## Contributing
 
-Areas where help is needed:
+**The easiest way to contribute: run a bootstrap node** (see above ↑).  
+Every node makes the network stronger.
 
-- Windows / macOS client
-- Android / iOS app
-- Web UI improvements
-- Security audit
-- Documentation and translations
+Other areas where help is needed:
+
+- 🖥️ Windows / macOS native client
+- 📱 Android / iOS app
+- 🌐 Web UI improvements
+- 🔐 Security audit
+- 📖 Documentation and translations
+- 🌍 Run nodes in underrepresented regions (Asia, South America, Africa)
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details.
 
