@@ -91,10 +91,36 @@ func (t *tproxyServer) handleConn(ctx context.Context, conn net.Conn) {
 
 	log.Printf("[tproxy] %s → [%s] → %s", conn.RemoteAddr(), peer.NodeIDShort(), target)
 
-	// Двунаправленная передача
+	// Двунаправленная передача с подсчётом байт (как в socks5.go)
 	done := make(chan struct{}, 2)
-	go func() { io.Copy(stream, conn); done <- struct{}{} }()
-	go func() { io.Copy(conn, stream); done <- struct{}{} }()
+	go func() {
+		buf := make([]byte, 32*1024)
+		for {
+			nr, err := conn.Read(buf)
+			if nr > 0 {
+				stream.Write(buf[:nr])
+				t.node.addProxiedBytes(int64(nr), 0)
+			}
+			if err != nil {
+				break
+			}
+		}
+		done <- struct{}{}
+	}()
+	go func() {
+		buf := make([]byte, 32*1024)
+		for {
+			nr, err := stream.Read(buf)
+			if nr > 0 {
+				conn.Write(buf[:nr])
+				t.node.addProxiedBytes(0, int64(nr))
+			}
+			if err != nil {
+				break
+			}
+		}
+		done <- struct{}{}
+	}()
 	<-done
 }
 

@@ -285,7 +285,7 @@ func (n *Node) startListener() error {
 		return err
 	}
 	qcfg := &quic.Config{
-		MaxIdleTimeout:       30 * time.Second,
+		MaxIdleTimeout:       120 * time.Second, // keepalive пингует каждые 25с — 120с запас
 		KeepAlivePeriod:      10 * time.Second,
 		MaxIncomingStreams:    1000,
 		MaxIncomingUniStreams: -1,
@@ -387,7 +387,7 @@ func (n *Node) dialPeer(addr string) error {
 		NextProtos:         []string{"swarm-v1"},
 	}
 	qcfg := &quic.Config{
-		MaxIdleTimeout:  30 * time.Second,
+		MaxIdleTimeout:  120 * time.Second,
 		KeepAlivePeriod: 10 * time.Second,
 	}
 
@@ -400,6 +400,29 @@ func (n *Node) dialPeer(addr string) error {
 	if err != nil {
 		conn.CloseWithError(1, "handshake failed")
 		return fmt.Errorf("handshake: %w", err)
+	}
+
+	// Проверяем NodeID если задан в конфиге (защита от подмены bootstrap).
+	// BootstrapNodeID — hex Ed25519 pubkey ожидаемого узла.
+	if n.cfg.BootstrapNodeID != "" {
+		expected, decErr := hex.DecodeString(n.cfg.BootstrapNodeID)
+		if decErr == nil {
+			actual := peer.nodeID[:]
+			match := len(expected) == len(actual)
+			if match {
+				for i := range expected {
+					if expected[i] != actual[i] {
+						match = false
+						break
+					}
+				}
+			}
+			if !match {
+				conn.CloseWithError(1, "node ID mismatch")
+				return fmt.Errorf("bootstrap NodeID mismatch: got %s, want %s",
+					peer.NodeIDShort(), n.cfg.BootstrapNodeID[:16])
+			}
+		}
 	}
 
 	n.addPeer(peer)
