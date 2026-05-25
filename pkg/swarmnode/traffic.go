@@ -27,6 +27,8 @@ import (
 type TrafficRecord struct {
 	BytesMonth int64  `json:"bytes_month"` // суммарно за текущий месяц
 	BytesToday int64  `json:"bytes_today"` // суммарно за текущий день
+	BytesUp    int64  `json:"bytes_up"`    // upload за текущий день (клиент→рой)
+	BytesDown  int64  `json:"bytes_down"`  // download за текущий день (рой→клиент)
 	MonthKey   string `json:"month_key"`   // "2026-05"
 	DayKey     string `json:"day_key"`     // "2026-05-25"
 	UpdatedAt  int64  `json:"updated_at"`  // unix timestamp последнего обновления
@@ -51,9 +53,9 @@ func newTrafficStore(path string) *trafficStore {
 	return ts
 }
 
-// add добавляет bytes к дневному и месячному счётчикам.
-// Автоматически сбрасывает счётчики при смене дня/месяца.
-func (ts *trafficStore) add(bytes int64) {
+// add добавляет up/down байты к счётчикам трафика.
+// Автоматически сбрасывает дневные счётчики при смене дня, месячные — при смене месяца.
+func (ts *trafficStore) add(up, down int64) {
 	now := time.Now()
 	monthKey := now.Format("2006-01")
 	dayKey := now.Format("2006-01-02")
@@ -66,14 +68,19 @@ func (ts *trafficStore) add(bytes int64) {
 		ts.record.BytesMonth = 0
 		ts.record.MonthKey = monthKey
 	}
-	// Сброс дневного счётчика при смене дня
+	// Сброс дневных счётчиков при смене дня
 	if ts.record.DayKey != dayKey {
 		ts.record.BytesToday = 0
+		ts.record.BytesUp = 0
+		ts.record.BytesDown = 0
 		ts.record.DayKey = dayKey
 	}
 
-	ts.record.BytesMonth += bytes
-	ts.record.BytesToday += bytes
+	total := up + down
+	ts.record.BytesMonth += total
+	ts.record.BytesToday += total
+	ts.record.BytesUp += up
+	ts.record.BytesDown += down
 	ts.record.UpdatedAt = now.Unix()
 	ts.dirty = true
 }

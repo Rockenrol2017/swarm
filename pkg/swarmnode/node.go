@@ -62,13 +62,8 @@ type Node struct {
 	// Round-robin счётчик для выбора пира
 	peerIdx uint64 // atomic
 
-	// Счётчики трафика на client стороне (SOCKS5/TPROXY proxied bytes).
-	// Обновляются в socks5.go handleConn.
-	// bytesUp = клиент→рой (upload), bytesDown = рой→клиент (download).
-	bytesUp   atomic.Int64
-	bytesDown atomic.Int64
-
 	// Persistent traffic accounting: выживает рестарты.
+	// Хранит bytes_up, bytes_down (сегодня), bytes_today, bytes_month.
 	// Используется для мониторинга лимита SkyEdge.
 	traffic *trafficStore
 
@@ -257,17 +252,10 @@ func (n *Node) selectUpstreamPeer() *Peer {
 
 // addProxiedBytes добавляет байты к счётчикам трафика (SOCKS5 client side).
 // up = байты от клиента к рою (upload), down = байты от роя к клиенту (download).
-// Вызывается из socks5.go handleConn вместо io.Copy.
+// Вызывается из socks5.go handleConn. Данные персистентны — выживают рестарт.
 func (n *Node) addProxiedBytes(up, down int64) {
-	if up > 0 {
-		n.bytesUp.Add(up)
-	}
-	if down > 0 {
-		n.bytesDown.Add(down)
-	}
-	total := up + down
-	if total > 0 && n.traffic != nil {
-		n.traffic.add(total)
+	if (up > 0 || down > 0) && n.traffic != nil {
+		n.traffic.add(up, down)
 	}
 }
 

@@ -101,14 +101,13 @@ func (n *Node) handleStatus(w http.ResponseWriter, r *http.Request) {
 	}
 	n.mu.RUnlock()
 
-	// Client-side SOCKS5 счётчики (работают на домашнем сервере)
-	bytesUp := n.bytesUp.Load()
-	bytesDown := n.bytesDown.Load()
-
-	// Persistent traffic counters (SkyEdge мониторинг)
-	var bytesToday, bytesMonth int64
+	// Persistent traffic counters (SkyEdge мониторинг + up/down направление).
+	// Все значения выживают рестарт — хранятся в traffic.json.
+	var bytesUp, bytesDown, bytesToday, bytesMonth int64
 	if n.traffic != nil {
 		tr := n.traffic.get()
+		bytesUp = tr.BytesUp
+		bytesDown = tr.BytesDown
 		bytesToday = tr.BytesToday
 		bytesMonth = tr.BytesMonth
 	}
