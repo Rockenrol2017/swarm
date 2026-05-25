@@ -113,6 +113,14 @@ else
     echo "  ✓ Конфиг уже существует"
 fi
 
+# Устанавливаем TPROXY скрипты
+echo "→ Устанавливаем TPROXY скрипты..."
+sudo mkdir -p /usr/local/share/swarm
+sudo cp ~/swarm-node-src/install/tproxy-rules.sh /usr/local/share/swarm/
+sudo cp ~/swarm-node-src/install/tproxy-cleanup.sh /usr/local/share/swarm/
+sudo chmod +x /usr/local/share/swarm/tproxy-rules.sh
+sudo chmod +x /usr/local/share/swarm/tproxy-cleanup.sh
+
 # Устанавливаем systemd unit
 echo "→ Устанавливаем systemd unit..."
 sudo cp ~/swarm-node-src/install/systemd/swarm-node.service /etc/systemd/system/

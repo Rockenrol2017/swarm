@@ -286,6 +286,32 @@ func bridgeStreamTCP(stream quic.Stream, target net.Conn,
 	<-done
 }
 
+// runKeepalive отправляет MsgPing каждые 25 секунд чтобы предотвратить
+// срабатывание QUIC idle timeout (MaxIdleTimeout=30s в node.go).
+// Запускается горутиной из Node.addPeer для каждого пира.
+func (p *Peer) runKeepalive(ctx context.Context) {
+	ticker := time.NewTicker(25 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if p.IsClosed() {
+				return
+			}
+			pingCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+			stream, err := p.conn.OpenStreamSync(pingCtx)
+			cancel()
+			if err != nil {
+				return // соединение мертво — node.connectToAddr переподключит
+			}
+			writeMsg(stream, p.sendCipher, MsgPing, nil)
+			stream.Close()
+		}
+	}
+}
+
 // ─── Handshakes ───────────────────────────────────────────────────────────
 
 // performServerHandshake выполняет рукопожатие со стороны сервера.

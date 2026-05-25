@@ -1,13 +1,23 @@
 [Unit]
 Description=S.W.A.R.M. Node — децентрализованный P2P узел
-Documentation=https://github.com/narodnaya-set/swarm
+Documentation=https://github.com/Rockenrol2017/swarm
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 User=root
+
+# Настройка TPROXY правил перед запуском.
+# '-' означает: не прерывать старт если скрипт вернул ошибку
+# (нормально для VDS/bootstrap где TPROXY не нужен).
+ExecStartPre=-/usr/local/share/swarm/tproxy-rules.sh
+
 ExecStart=/usr/local/bin/swarm-node -config /etc/swarm/node-config.json
+
+# Очистка TPROXY правил после остановки
+ExecStopPost=-/usr/local/share/swarm/tproxy-cleanup.sh
+
 Restart=always
 RestartSec=10
 
@@ -20,7 +30,7 @@ StandardOutput=journal
 StandardError=journal
 SyslogIdentifier=swarm-node
 
-# Capability для работы с сетью
+# Capability для работы с сетью (TPROXY, bind на привилегированные порты)
 AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
 
 [Install]

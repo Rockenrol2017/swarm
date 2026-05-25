@@ -418,6 +418,9 @@ func (n *Node) addPeer(p *Peer) {
 	n.peers[p.nodeID] = p
 	n.mu.Unlock()
 
+	// Keepalive: отправляем MsgPing каждые 25с чтобы QUIC не разрывал idle соединение
+	go p.runKeepalive(n.ctx)
+
 	// Bootstrap/relay анонсирует список пиров новому узлу
 	if n.cfg.Mode == "bootstrap" || n.cfg.Mode == "relay" {
 		go n.announceToPeer(p)
