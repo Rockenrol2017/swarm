@@ -1,0 +1,91 @@
+{
+  "log": {
+    "loglevel": "warning"
+  },
+  "dns": {
+    "servers": [
+      "1.1.1.1",
+      "8.8.8.8"
+    ]
+  },
+  "inbounds": [
+    {
+      "port": {{.Socks5Port}},
+      "listen": "127.0.0.1",
+      "protocol": "socks",
+      "settings": {
+        "auth": "noauth",
+        "udp": true
+      },
+      "tag": "socks-in"
+    }
+  ],
+  "outbounds": [
+    {
+      "protocol": "vless",
+      "tag": "swarm-out",
+      "settings": {
+        "vnext": [
+          {
+            "address": "{{.VDSHost}}",
+            "port": {{.VDSPort}},
+            "users": [
+              {
+                "id": "{{.UUID}}",
+                "encryption": "none",
+                "flow": ""
+              }
+            ]
+          }
+        ]
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "reality",
+        "realitySettings": {
+          "fingerprint": "chrome",
+          "serverName": "{{.SNI}}",
+          "publicKey": "{{.PublicKey}}",
+          "shortId": "{{.ShortID}}",
+          "spiderX": "/"
+        }
+      }
+    },
+    {
+      "protocol": "freedom",
+      "tag": "direct"
+    },
+    {
+      "protocol": "blackhole",
+      "tag": "block"
+    }
+  ],
+  "routing": {
+    "domainStrategy": "IPIfNonMatch",
+    "rules": [
+      {
+        "type": "field",
+        "ip": ["geoip:private"],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "domain": ["geosite:cn"],
+        "outboundTag": "direct"
+      },
+      {
+        "type": "field",
+        "domain": [
+          "domain:sber.ru",
+          "domain:gosuslugi.ru",
+          "domain:vk.com",
+          "domain:yandex.ru",
+          "domain:ya.ru",
+          "domain:mail.ru",
+          "domain:ok.ru"
+        ],
+        "outboundTag": "direct"
+      }
+    ]
+  }
+}

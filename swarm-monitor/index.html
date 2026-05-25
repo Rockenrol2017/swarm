@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.W.A.R.M. Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header { text-align: center; margin-bottom: 20px; }
+        .logo {
+            font-size: 2rem; font-weight: 700;
+            letter-spacing: 4px; color: #58a6ff; margin-bottom: 4px;
+        }
+        .tagline { font-size: 0.75rem; color: #8b949e; letter-spacing: 2px; }
+
+        .status-badge {
+            display: inline-flex; align-items: center; gap: 10px;
+            padding: 10px 24px; border-radius: 50px;
+            font-size: 1rem; font-weight: 600; margin: 12px 0;
+            border: 2px solid transparent; transition: all 0.3s;
+        }
+        .status-badge.active  { background: rgba(35,134,54,.15);  border-color: #238636; color: #3fb950; }
+        .status-badge.inactive{ background: rgba(248,81,73,.15);  border-color: #da3633; color: #f85149; }
+        .status-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: currentColor; animation: pulse 2s infinite;
+        }
+        .status-badge.inactive .status-dot { animation: none; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .section-title {
+            width: 100%; max-width: 900px;
+            font-size: 0.7rem; color: #484f58;
+            text-transform: uppercase; letter-spacing: 2px;
+            margin: 16px 0 8px; padding-left: 4px;
+            border-bottom: 1px solid #21262d; padding-bottom: 6px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px; width: 100%; max-width: 900px; margin-bottom: 4px;
+        }
+
+        .card {
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 12px; padding: 18px; text-align: center;
+        }
+        .card.highlight { border-color: #58a6ff44; }
+        .card.warn      { border-color: #d2992244; }
+
+        .card-label {
+            font-size: 0.7rem; color: #8b949e;
+            text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;
+        }
+        .card-value { font-size: 1.7rem; font-weight: 700; color: #58a6ff; }
+        .card-unit  { font-size: 0.85rem; color: #8b949e; margin-top: 2px; }
+
+        .speed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+        .speed-item { background: #0d1117; border-radius: 8px; padding: 8px; text-align: center; }
+        .speed-direction { font-size: 0.65rem; color: #8b949e; margin-bottom: 4px; }
+        .speed-value { font-size: 1.1rem; font-weight: 700; }
+        .speed-down { color: #3fb950; }
+        .speed-up   { color: #f0883e; }
+
+        /* Прогресс-бар трафика */
+        .traffic-bar-container {
+            width: 100%; max-width: 900px;
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 12px; padding: 18px; margin-bottom: 4px;
+        }
+        .traffic-bar-header {
+            display: flex; justify-content: space-between;
+            align-items: center; margin-bottom: 10px;
+        }
+        .traffic-bar-title { font-size: 0.8rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; }
+        .traffic-bar-percent { font-size: 1rem; font-weight: 700; }
+        .traffic-bar-track {
+            background: #0d1117; border-radius: 50px; height: 10px;
+            overflow: hidden; margin-bottom: 8px;
+        }
+        .traffic-bar-fill {
+            height: 100%; border-radius: 50px; transition: width 0.5s, background-color 0.5s;
+        }
+        .traffic-bar-fill.green  { background: #238636; }
+        .traffic-bar-fill.yellow { background: #d29922; }
+        .traffic-bar-fill.red    { background: #da3633; animation: blink 1s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        .traffic-bar-details {
+            display: flex; justify-content: space-between;
+            font-size: 0.75rem; color: #8b949e;
+        }
+
+        /* Секция роя */
+        .swarm-panel {
+            width: 100%; max-width: 900px;
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 12px; padding: 18px; margin-bottom: 4px;
+        }
+        .swarm-panel.active-panel { border-color: #58a6ff55; }
+
+        .swarm-header {
+            display: flex; align-items: center; gap: 12px;
+            margin-bottom: 14px;
+        }
+        .swarm-dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: #484f58; flex-shrink: 0;
+        }
+        .swarm-dot.online { background: #3fb950; box-shadow: 0 0 6px #3fb95066; }
+        .swarm-title { font-size: 0.85rem; font-weight: 600; color: #e6edf3; }
+        .swarm-subtitle { font-size: 0.75rem; color: #8b949e; margin-left: auto; }
+
+        .swarm-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+        }
+        .swarm-stat {
+            background: #0d1117; border-radius: 8px;
+            padding: 12px; text-align: center;
+        }
+        .swarm-stat-label { font-size: 0.65rem; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+        .swarm-stat-value { font-size: 1.3rem; font-weight: 700; color: #58a6ff; }
+        .swarm-stat-unit  { font-size: 0.7rem; color: #8b949e; }
+
+        /* Список пиров */
+        .peers-list { margin-top: 14px; }
+        .peer-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 12px;
+            background: #0d1117; border-radius: 6px; margin-bottom: 6px;
+            font-size: 0.8rem;
+        }
+        .peer-dot { width: 6px; height: 6px; border-radius: 50%; background: #3fb950; flex-shrink: 0; }
+        .peer-id  { color: #58a6ff; font-family: monospace; flex: 1; }
+        .peer-stat{ color: #8b949e; font-size: 0.72rem; }
+
+        .node-info {
+            display: flex; align-items: center; gap: 8px;
+            background: #161b22; border: 1px solid #30363d;
+            border-radius: 8px; padding: 10px 16px; margin-bottom: 16px;
+            font-size: 0.85rem;
+        }
+        .node-dot { width: 8px; height: 8px; border-radius: 50%; background: #3fb950; }
+
+        .footer {
+            color: #484f58; font-size: 0.72rem; text-align: center;
+            margin-top: auto; padding-top: 20px;
+        }
+
+        @media (max-width: 480px) {
+            .logo { font-size: 1.5rem; }
+            .card-value { font-size: 1.4rem; }
+            .grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+            .card { padding: 12px; }
+            .swarm-stats { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">S.W.A.R.M.</div>
+        <div class="tagline">SECURE · WORLDWIDE · ANONYMOUS · ROUTING · MESH</div>
+    </div>
+
+    <div id="statusBadge" class="status-badge active">
+        <div class="status-dot"></div>
+        <span id="statusText">ЗАЩИТА АКТИВНА</span>
+    </div>
+
+    <div class="node-info">
+        <div class="node-dot"></div>
+        <span>Выход: <strong id="nodeInfo">Стокгольм 🇸🇪</strong></span>
+        <span style="margin-left:auto;color:#484f58">|</span>
+        <span id="uptimeText" style="margin-left:8px;color:#8b949e">—</span>
+    </div>
+
+    <!-- ─── РОЙ ─────────────────────────────────────────── -->
+    <div class="section-title">🐝 Рой</div>
+
+    <div id="swarmPanel" class="swarm-panel">
+        <div class="swarm-header">
+            <div id="swarmDot" class="swarm-dot"></div>
+            <span class="swarm-title">swarm-node</span>
+            <span id="swarmMode" class="swarm-subtitle">—</span>
+            <span id="swarmNodeId" style="font-size:0.72rem;color:#484f58;font-family:monospace;margin-left:12px"></span>
+        </div>
+
+        <div class="swarm-stats">
+            <div class="swarm-stat">
+                <div class="swarm-stat-label">Пиры</div>
+                <div class="swarm-stat-value" id="swarmPeers">—</div>
+                <div class="swarm-stat-unit">подключено</div>
+            </div>
+            <div class="swarm-stat">
+                <div class="swarm-stat-label">Отправлено</div>
+                <div class="swarm-stat-value" id="swarmSent">—</div>
+                <div class="swarm-stat-unit" id="swarmSentUnit">МБ</div>
+            </div>
+            <div class="swarm-stat">
+                <div class="swarm-stat-label">Получено</div>
+                <div class="swarm-stat-value" id="swarmRecv">—</div>
+                <div class="swarm-stat-unit" id="swarmRecvUnit">МБ</div>
+            </div>
+            <div class="swarm-stat">
+                <div class="swarm-stat-label">Аптайм</div>
+                <div class="swarm-stat-value" id="swarmUptime" style="font-size:1rem">—</div>
+                <div class="swarm-stat-unit"></div>
+            </div>
+        </div>
+
+        <div id="peersList" class="peers-list"></div>
+
+        <!-- ─── Задержка RTT ──────────────────────────────── -->
+        <div style="margin-top:14px;background:#0d1117;border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:16px">
+            <div>
+                <div style="font-size:0.65rem;color:#8b949e;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">RTT до VDS</div>
+                <div style="display:flex;align-items:baseline;gap:6px">
+                    <span id="latencyVal" style="font-size:1.5rem;font-weight:700;color:#58a6ff">—</span>
+                    <span style="font-size:0.8rem;color:#8b949e">мс</span>
+                </div>
+            </div>
+            <div id="latencyBar" style="flex:1;height:6px;background:#161b22;border-radius:50px;overflow:hidden">
+                <div id="latencyBarFill" style="height:100%;border-radius:50px;width:0%;transition:width 0.5s,background-color 0.5s;background:#3fb950"></div>
+            </div>
+            <div id="latencyStatus" style="font-size:0.72rem;color:#8b949e;min-width:80px;text-align:right">норма 600-800мс</div>
+        </div>
+
+        <!-- ─── Трафик swarm (session + persistent) ────────── -->
+        <div style="margin-top:10px;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">
+            <div class="swarm-stat">
+                <div class="swarm-stat-label">↑ Upload (сессия)</div>
+                <div id="swarmBytesUp" class="swarm-stat-value" style="color:#f0883e;font-size:1.1rem">—</div>
+                <div id="swarmBytesUpUnit" class="swarm-stat-unit">МБ</div>
+            </div>
+            <div class="swarm-stat">
+                <div class="swarm-stat-label">↓ Download (сессия)</div>
+                <div id="swarmBytesDown" class="swarm-stat-value" style="color:#3fb950;font-size:1.1rem">—</div>
+                <div id="swarmBytesDownUnit" class="swarm-stat-unit">МБ</div>
+            </div>
+            <div class="swarm-stat">
+                <div class="swarm-stat-label">Сегодня</div>
+                <div id="swarmBytesToday" class="swarm-stat-value" style="font-size:1.1rem">—</div>
+                <div id="swarmBytesTodayUnit" class="swarm-stat-unit">МБ</div>
+            </div>
+            <div class="swarm-stat">
+                <div class="swarm-stat-label">Месяц (swarm)</div>
+                <div id="swarmBytesMonth" class="swarm-stat-value" style="font-size:1.1rem">—</div>
+                <div id="swarmBytesMonthUnit" class="swarm-stat-unit">МБ</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ─── КАНАЛ (xray) ──────────────────────────────────── -->
+    <div class="section-title">📡 Спутниковый канал (xray)</div>
+
+    <div class="traffic-bar-container">
+        <div class="traffic-bar-header">
+            <span class="traffic-bar-title">Трафик / месяц</span>
+            <span id="trafficPercent" class="traffic-bar-percent" style="color:#3fb950">0%</span>
+        </div>
+        <div class="traffic-bar-track">
+            <div id="trafficBarFill" class="traffic-bar-fill green" style="width:0%"></div>
+        </div>
+        <div class="traffic-bar-details">
+            <span id="trafficUsed">Использовано: 0 МБ</span>
+            <span id="trafficLimit">Лимит: 310 ГБ · предупреждение при 280 ГБ</span>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="card">
+            <div class="card-label">Скорость</div>
+            <div class="speed-grid">
+                <div class="speed-item">
+                    <div class="speed-direction">↓ Вход</div>
+                    <div class="speed-value speed-down" id="speedDown">0.0</div>
+                    <div style="font-size:0.65rem;color:#8b949e">Мбит/с</div>
+                </div>
+                <div class="speed-item">
+                    <div class="speed-direction">↑ Выход</div>
+                    <div class="speed-value speed-up" id="speedUp">0.0</div>
+                    <div style="font-size:0.65rem;color:#8b949e">Мбит/с</div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-label">Входящий (xray)</div>
+            <div class="card-value" id="bytesIn">0</div>
+            <div class="card-unit" id="bytesInUnit">МБ</div>
+        </div>
+        <div class="card">
+            <div class="card-label">Исходящий (xray)</div>
+            <div class="card-value" id="bytesOut">0</div>
+            <div class="card-unit" id="bytesOutUnit">МБ</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        S.W.A.R.M. v0.2 · Этап 2 · GPL v3<br>
+        <span id="lastUpdate" style="color:#30363d">—</span>
+    </div>
+
+    <script>
+    const TRAFFIC_LIMIT = 332748177408; // 310 ГБ (SkyEdge полная скорость)
+
+    async function fetchStatus() {
+        try {
+            const res = await fetch('/api/status');
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            updateUI(data);
+        } catch (e) {
+            setOffline();
+        }
+    }
+
+    function updateUI(d) {
+        const isActive = d.swarm_active || d.xray_active;
+
+        // Главный статус
+        const badge = document.getElementById('statusBadge');
+        badge.className = 'status-badge ' + (isActive ? 'active' : 'inactive');
+        document.getElementById('statusText').textContent =
+            isActive ? 'ЗАЩИТА АКТИВНА' : 'ОТКЛЮЧЕНО';
+
+        document.getElementById('nodeInfo').textContent = d.vds_node || '—';
+        document.getElementById('uptimeText').textContent = 'Монитор: ' + (d.uptime || '—');
+
+        // ─── Рой ───────────────────────────────────────────
+        const swarmPanel = document.getElementById('swarmPanel');
+        const swarmDot   = document.getElementById('swarmDot');
+
+        if (d.swarm_active) {
+            swarmPanel.classList.add('active-panel');
+            swarmDot.classList.add('online');
+        } else {
+            swarmPanel.classList.remove('active-panel');
+            swarmDot.classList.remove('online');
+        }
+
+        document.getElementById('swarmMode').textContent =
+            d.swarm_mode ? 'mode: ' + d.swarm_mode : 'offline';
+        document.getElementById('swarmNodeId').textContent =
+            d.swarm_node_id ? d.swarm_node_id + '…' : '';
+        document.getElementById('swarmPeers').textContent =
+            d.swarm_active ? d.swarm_peers : '—';
+        document.getElementById('swarmUptime').textContent =
+            d.swarm_uptime || '—';
+
+        setBytesCell('swarmSent', 'swarmSentUnit', d.swarm_bytes_sent || 0);
+        setBytesCell('swarmRecv', 'swarmRecvUnit', d.swarm_bytes_recv || 0);
+
+        // Задержка RTT до VDS
+        updateLatency(d.swarm_latency_ms || 0);
+
+        // Swarm SOCKS5 traffic counters
+        setBytesCell('swarmBytesUp',    'swarmBytesUpUnit',    d.swarm_bytes_up    || 0);
+        setBytesCell('swarmBytesDown',  'swarmBytesDownUnit',  d.swarm_bytes_down  || 0);
+        setBytesCell('swarmBytesToday', 'swarmBytesTodayUnit', d.swarm_bytes_today || 0);
+        setBytesCell('swarmBytesMonth', 'swarmBytesMonthUnit', d.swarm_bytes_month || 0);
+
+        // Список пиров
+        const peersList = document.getElementById('peersList');
+        if (d.swarm_peer_list && d.swarm_peer_list.length > 0) {
+            peersList.innerHTML = d.swarm_peer_list.map(p => {
+                const upMins = Math.floor(p.uptime_secs / 60);
+                const sentMb = (p.bytes_sent / 1e6).toFixed(1);
+                const recvMb = (p.bytes_recv / 1e6).toFixed(1);
+                return `<div class="peer-item">
+                    <div class="peer-dot"></div>
+                    <span class="peer-id">${p.node_id}…</span>
+                    <span class="peer-stat">↑${sentMb}МБ ↓${recvMb}МБ · ${upMins}м</span>
+                </div>`;
+            }).join('');
+        } else if (d.swarm_active) {
+            peersList.innerHTML = '<div style="color:#484f58;font-size:0.75rem;padding:8px 0">нет подключённых пиров</div>';
+        } else {
+            peersList.innerHTML = '';
+        }
+
+        // ─── xray / канал ───────────────────────────────────
+        const speedDown = (d.speed_down_bps || 0) / 125000; // байт/с → Мбит/с
+        const speedUp   = (d.speed_up_bps   || 0) / 125000;
+        document.getElementById('speedDown').textContent = speedDown.toFixed(1);
+        document.getElementById('speedUp').textContent   = speedUp.toFixed(1);
+
+        setBytesCard('bytesIn',  'bytesInUnit',  d.downlink_bytes || 0);
+        setBytesCard('bytesOut', 'bytesOutUnit', d.uplink_bytes   || 0);
+        updateTrafficBar(d.total_bytes || 0);
+
+        document.getElementById('lastUpdate').textContent =
+            'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+    }
+
+    function setBytesCell(valId, unitId, bytes) {
+        let v, u;
+        if (bytes >= 1e9)      { v = (bytes/1e9).toFixed(2); u = 'ГБ'; }
+        else if (bytes >= 1e6) { v = (bytes/1e6).toFixed(1); u = 'МБ'; }
+        else                   { v = Math.round(bytes/1024);  u = 'КБ'; }
+        document.getElementById(valId).textContent = v;
+        document.getElementById(unitId).textContent = u;
+    }
+
+    function setBytesCard(valId, unitId, bytes) { setBytesCell(valId, unitId, bytes); }
+
+    // updateLatency обновляет индикатор RTT.
+    // Нормы для спутника: 600-800мс. Цвета:
+    //   < 500мс  — зелёный (отличный сигнал)
+    //   500-1200 — синий   (норма для спутника)
+    //   > 1200мс — жёлтый (деградация)
+    //   -1       — красный (недоступен)
+    function updateLatency(ms) {
+        const valEl    = document.getElementById('latencyVal');
+        const fillEl   = document.getElementById('latencyBarFill');
+        const statusEl = document.getElementById('latencyStatus');
+
+        if (ms === 0) {
+            valEl.textContent = '—';
+            valEl.style.color = '#484f58';
+            fillEl.style.width = '0%';
+            statusEl.textContent = 'измерение…';
+            return;
+        }
+        if (ms === -1) {
+            valEl.textContent = '—';
+            valEl.style.color = '#f85149';
+            fillEl.style.width = '100%';
+            fillEl.style.background = '#da3633';
+            statusEl.textContent = 'недоступен';
+            return;
+        }
+        valEl.textContent = ms;
+        // Нормализуем бар: 0мс = 0%, 2000мс = 100%
+        const pct = Math.min(ms / 2000 * 100, 100);
+        fillEl.style.width = pct.toFixed(1) + '%';
+        if (ms < 500) {
+            valEl.style.color = '#3fb950';
+            fillEl.style.background = '#238636';
+            statusEl.textContent = 'отлично';
+        } else if (ms < 1200) {
+            valEl.style.color = '#58a6ff';
+            fillEl.style.background = '#388bfd';
+            statusEl.textContent = 'норма (спутник)';
+        } else {
+            valEl.style.color = '#d29922';
+            fillEl.style.background = '#bb8009';
+            statusEl.textContent = 'медленно';
+        }
+    }
+
+    function updateTrafficBar(bytes) {
+        const pct  = Math.min(bytes / TRAFFIC_LIMIT * 100, 100);
+        const fill = document.getElementById('trafficBarFill');
+        const pctEl= document.getElementById('trafficPercent');
+
+        fill.style.width = pct.toFixed(1) + '%';
+        if (pct >= 90)      { fill.className = 'traffic-bar-fill red';    pctEl.style.color = '#f85149'; }
+        else if (pct >= 70) { fill.className = 'traffic-bar-fill yellow'; pctEl.style.color = '#d29922'; }
+        else                { fill.className = 'traffic-bar-fill green';  pctEl.style.color = '#3fb950'; }
+        pctEl.textContent = pct.toFixed(1) + '%';
+
+        let usedStr;
+        if (bytes >= 1e9)      usedStr = (bytes/1e9).toFixed(2) + ' ГБ';
+        else if (bytes >= 1e6) usedStr = (bytes/1e6).toFixed(0) + ' МБ';
+        else                   usedStr = Math.floor(bytes/1024) + ' КБ';
+
+        document.getElementById('trafficUsed').textContent = 'Использовано: ' + usedStr;
+    }
+
+    function setOffline() {
+        document.getElementById('statusBadge').className = 'status-badge inactive';
+        document.getElementById('statusText').textContent = 'НЕТ СВЯЗИ';
+    }
+
+    fetchStatus();
+    setInterval(fetchStatus, 3000);
+    </script>
+</body>
+</html>

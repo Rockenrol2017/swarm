@@ -1,0 +1,9 @@
+{
+  "listen_addr": ":7437",
+  "socks5_addr": ":1090",
+  "identity_file": "/etc/swarm/identity.json",
+  "bootstrap_addr": "YOUR_VDS_IP:7437",
+  "bootstrap_node_id": "",
+  "max_peers": 50,
+  "mode": "relay"
+}

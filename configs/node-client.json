@@ -1,0 +1,10 @@
+{
+  "listen_addr": "",
+  "socks5_addr": ":1090",
+  "tproxy_addr": "",
+  "identity_file": "/etc/swarm/identity.json",
+  "bootstrap_addr": "YOUR_VDS_IP:7437",
+  "bootstrap_node_id": "",
+  "max_peers": 10,
+  "mode": "client"
+}

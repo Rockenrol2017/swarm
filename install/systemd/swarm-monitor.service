@@ -1,0 +1,18 @@
+[Unit]
+Description=S.W.A.R.M. Monitor Dashboard
+After=network.target swarm-node.service
+Wants=swarm-node.service
+
+[Service]
+Type=simple
+# Запускается из /usr/local/bin/ — ищет index.html в /opt/swarm-monitor/
+WorkingDirectory=/opt/swarm-monitor
+ExecStart=/usr/local/bin/swarm-monitor
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=swarm-monitor
+
+[Install]
+WantedBy=multi-user.target

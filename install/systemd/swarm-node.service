@@ -1,0 +1,27 @@
+[Unit]
+Description=S.W.A.R.M. Node — децентрализованный P2P узел
+Documentation=https://github.com/narodnaya-set/swarm
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/local/bin/swarm-node -config /etc/swarm/node-config.json
+Restart=always
+RestartSec=10
+
+# Ограничения ресурсов
+MemoryMax=128M
+CPUQuota=30%
+
+# Логи через journald
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=swarm-node
+
+# Capability для работы с сетью
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_BIND_SERVICE
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,36 @@
+[Unit]
+Description=S.W.A.R.M. Core Service — Secure Worldwide Anonymous Routing Mesh
+Documentation=https://github.com/narodnaya-set/swarm
+After=network-online.target
+Wants=network-online.target
+# Перезапускаться после системных зависимостей
+RequiresMountsFor=/etc/swarm
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/swarm-core
+ExecStopPost=/sbin/iptables -F
+ExecStopPost=/sbin/iptables -t nat -F
+ExecStopPost=/sbin/iptables -P INPUT ACCEPT
+ExecStopPost=/sbin/iptables -P OUTPUT ACCEPT
+ExecStopPost=/sbin/iptables -P FORWARD ACCEPT
+
+# Перезапуск при сбое (не при штатном завершении)
+Restart=on-failure
+RestartSec=5
+
+# Безопасность
+PrivateTmp=no
+NoNewPrivileges=no
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=swarm-core
+
+# Ограничения ресурсов (слабое железо — Pentium B960)
+MemoryMax=80M
+CPUQuota=50%
+
+[Install]
+WantedBy=multi-user.target

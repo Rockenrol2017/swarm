@@ -1,0 +1,62 @@
+# S.W.A.R.M. — .gitignore
+
+# ─── Конфигурации с секретами ────────────────────────────────
+/etc/swarm/
+config.json
+config.local.*
+*.key
+*.pem
+*.secret
+*.p12
+*.pfx
+.env
+.env.*
+identity.json
+node-config.json
+
+# ─── Данные трафика (персональные) ───────────────────────────
+traffic.json
+/var/lib/swarm/
+
+# ─── Скомпилированные бинарники ───────────────────────────────
+swarm-node
+swarm-core
+swarm-monitor-bin
+tun2socks
+xray
+/bin/
+/build/
+
+# ─── Go ──────────────────────────────────────────────────────
+vendor/
+*.test
+*.out
+coverage.txt
+__debug_bin
+
+# ─── OS ──────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# ─── IDE ─────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+
+# ─── Тесты ───────────────────────────────────────────────────
+*.prof
+pprof/
+
+# ─── Логи ────────────────────────────────────────────────────
+*.log
+/logs/

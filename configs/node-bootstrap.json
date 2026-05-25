@@ -1,0 +1,9 @@
+{
+  "listen_addr": ":7437",
+  "socks5_addr": "",
+  "identity_file": "/etc/swarm/identity.json",
+  "bootstrap_addr": "",
+  "bootstrap_node_id": "",
+  "max_peers": 200,
+  "mode": "bootstrap"
+}

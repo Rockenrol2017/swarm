@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.W.A.R.M. Dashboard</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .logo {
+            font-size: 2rem;
+            font-weight: 700;
+            letter-spacing: 4px;
+            color: #58a6ff;
+            margin-bottom: 4px;
+        }
+
+        .tagline {
+            font-size: 0.8rem;
+            color: #8b949e;
+            letter-spacing: 2px;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 24px;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin: 16px 0;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .status-badge.active {
+            background: rgba(35, 134, 54, 0.15);
+            border-color: #238636;
+            color: #3fb950;
+        }
+
+        .status-badge.inactive {
+            background: rgba(248, 81, 73, 0.15);
+            border-color: #da3633;
+            color: #f85149;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: currentColor;
+            animation: pulse 2s infinite;
+        }
+
+        .status-badge.inactive .status-dot {
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            width: 100%;
+            max-width: 900px;
+            margin-bottom: 24px;
+        }
+
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .card-label {
+            font-size: 0.75rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .card-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #58a6ff;
+        }
+
+        .card-unit {
+            font-size: 0.9rem;
+            color: #8b949e;
+            margin-top: 4px;
+        }
+
+        .speed-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .speed-item {
+            background: #0d1117;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .speed-direction {
+            font-size: 0.7rem;
+            color: #8b949e;
+            margin-bottom: 4px;
+        }
+
+        .speed-value {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .speed-down { color: #3fb950; }
+        .speed-up   { color: #f0883e; }
+
+        /* Прогресс-бар трафика */
+        .traffic-bar-container {
+            width: 100%;
+            max-width: 900px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+
+        .traffic-bar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .traffic-bar-title {
+            font-size: 0.85rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .traffic-bar-percent {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .traffic-bar-track {
+            background: #0d1117;
+            border-radius: 50px;
+            height: 12px;
+            overflow: hidden;
+            margin-bottom: 10px;
+        }
+
+        .traffic-bar-fill {
+            height: 100%;
+            border-radius: 50px;
+            transition: width 0.5s, background-color 0.5s;
+        }
+
+        .traffic-bar-fill.green  { background: #238636; }
+        .traffic-bar-fill.yellow { background: #d29922; }
+        .traffic-bar-fill.red    {
+            background: #da3633;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .traffic-bar-details {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #8b949e;
+        }
+
+        .node-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 12px 20px;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .node-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #3fb950;
+        }
+
+        .footer {
+            color: #484f58;
+            font-size: 0.75rem;
+            text-align: center;
+            margin-top: auto;
+            padding-top: 20px;
+        }
+
+        /* Адаптив для мобильных */
+        @media (max-width: 480px) {
+            .logo { font-size: 1.5rem; }
+            .card-value { font-size: 1.4rem; }
+            .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .card { padding: 14px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="logo">S.W.A.R.M.</div>
+        <div class="tagline">SECURE · WORLDWIDE · ANONYMOUS · ROUTING · MESH</div>
+    </div>
+
+    <div id="statusBadge" class="status-badge active">
+        <div class="status-dot"></div>
+        <span id="statusText">ЗАЩИТА АКТИВНА</span>
+    </div>
+
+    <div class="node-info">
+        <div class="node-dot"></div>
+        <span>Узел: <strong id="nodeInfo">Стокгольм 🇸🇪</strong></span>
+        <span style="margin-left:auto;color:#484f58">|</span>
+        <span id="uptimeText" style="margin-left:8px;color:#8b949e">—</span>
+    </div>
+
+    <!-- Прогресс-бар спутникового трафика -->
+    <div class="traffic-bar-container">
+        <div class="traffic-bar-header">
+            <span class="traffic-bar-title">🛰️ Спутниковый трафик / месяц</span>
+            <span id="trafficPercent" class="traffic-bar-percent" style="color:#3fb950">0%</span>
+        </div>
+        <div class="traffic-bar-track">
+            <div id="trafficBarFill" class="traffic-bar-fill green" style="width:0%"></div>
+        </div>
+        <div class="traffic-bar-details">
+            <span id="trafficUsed">Использовано: 0 МБ</span>
+            <span id="trafficLimit">Лимит: 35 ГБ</span>
+        </div>
+    </div>
+
+    <!-- Основные метрики -->
+    <div class="grid">
+        <div class="card">
+            <div class="card-label">Скорость</div>
+            <div class="speed-grid">
+                <div class="speed-item">
+                    <div class="speed-direction">↓ Вход</div>
+                    <div class="speed-value speed-down" id="speedDown">0.0</div>
+                    <div style="font-size:0.7rem;color:#8b949e">Мбит/с</div>
+                </div>
+                <div class="speed-item">
+                    <div class="speed-direction">↑ Выход</div>
+                    <div class="speed-value speed-up" id="speedUp">0.0</div>
+                    <div style="font-size:0.7rem;color:#8b949e">Мбит/с</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-label">Входящий трафик</div>
+            <div class="card-value" id="bytesIn">0</div>
+            <div class="card-unit" id="bytesInUnit">МБ</div>
+        </div>
+
+        <div class="card">
+            <div class="card-label">Исходящий трафик</div>
+            <div class="card-value" id="bytesOut">0</div>
+            <div class="card-unit" id="bytesOutUnit">МБ</div>
+        </div>
+    </div>
+
+    <div class="footer">
+        S.W.A.R.M. v0.1 · Этап 1 · GPL v3<br>
+        <span id="lastUpdate" style="color:#30363d">Обновлено только что</span>
+    </div>
+
+    <script>
+        // Лимит трафика: 35 ГБ = 37,580,963,840 байт
+        const TRAFFIC_LIMIT = 37580963840;
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const data = await res.json();
+                updateUI(data);
+            } catch (e) {
+                setOffline();
+            }
+        }
+
+        function updateUI(data) {
+            const isActive = data.status === 'running' && data.vds_connected;
+
+            // Статус бейдж
+            const badge = document.getElementById('statusBadge');
+            badge.className = 'status-badge ' + (isActive ? 'active' : 'inactive');
+            document.getElementById('statusText').textContent =
+                isActive ? 'ЗАЩИТА АКТИВНА' : 'ОТКЛЮЧЕНО';
+
+            // Узел и аптайм
+            document.getElementById('nodeInfo').textContent = data.vds_node || 'Стокгольм 🇸🇪';
+            document.getElementById('uptimeText').textContent = 'Аптайм: ' + (data.uptime || '—');
+
+            // Скорость
+            const speedDown = (data.speed_in_bps || 0) / 1e6 * 8;   // байт/с → Мбит/с
+            const speedUp   = (data.speed_out_bps || 0) / 1e6 * 8;
+            document.getElementById('speedDown').textContent = speedDown.toFixed(1);
+            document.getElementById('speedUp').textContent   = speedUp.toFixed(1);
+
+            // Трафик
+            setTrafficCard('bytesIn',  'bytesInUnit',  data.bytes_in  || 0);
+            setTrafficCard('bytesOut', 'bytesOutUnit', data.bytes_out || 0);
+
+            // Прогресс-бар спутникового трафика
+            const totalBytes = (data.bytes_in || 0) + (data.bytes_out || 0);
+            updateTrafficBar(totalBytes);
+
+            // Время обновления
+            document.getElementById('lastUpdate').textContent =
+                'Обновлено: ' + new Date().toLocaleTimeString('ru-RU');
+        }
+
+        function setTrafficCard(valueId, unitId, bytes) {
+            let value, unit;
+            if (bytes >= 1e9) {
+                value = (bytes / 1e9).toFixed(2);
+                unit = 'ГБ';
+            } else if (bytes >= 1e6) {
+                value = (bytes / 1e6).toFixed(1);
+                unit = 'МБ';
+            } else {
+                value = (bytes / 1024).toFixed(0);
+                unit = 'КБ';
+            }
+            document.getElementById(valueId).textContent = value;
+            document.getElementById(unitId).textContent = unit;
+        }
+
+        function updateTrafficBar(bytes) {
+            const percent = Math.min((bytes / TRAFFIC_LIMIT) * 100, 100);
+            const fill = document.getElementById('trafficBarFill');
+            const pct  = document.getElementById('trafficPercent');
+            const used = document.getElementById('trafficUsed');
+            const limit = document.getElementById('trafficLimit');
+
+            fill.style.width = percent.toFixed(1) + '%';
+
+            // Цвет по уровню заполнения
+            if (percent >= 90) {
+                fill.className = 'traffic-bar-fill red';
+                pct.style.color = '#f85149';
+            } else if (percent >= 70) {
+                fill.className = 'traffic-bar-fill yellow';
+                pct.style.color = '#d29922';
+            } else {
+                fill.className = 'traffic-bar-fill green';
+                pct.style.color = '#3fb950';
+            }
+
+            pct.textContent = percent.toFixed(1) + '%';
+
+            // Форматируем использованный трафик
+            let usedStr;
+            if (bytes >= 1e9) usedStr = (bytes / 1e9).toFixed(2) + ' ГБ';
+            else if (bytes >= 1e6) usedStr = (bytes / 1e6).toFixed(0) + ' МБ';
+            else usedStr = Math.floor(bytes / 1024) + ' КБ';
+
+            used.textContent  = 'Использовано: ' + usedStr;
+            limit.textContent = 'Лимит: 35 ГБ';
+        }
+
+        function setOffline() {
+            const badge = document.getElementById('statusBadge');
+            badge.className = 'status-badge inactive';
+            document.getElementById('statusText').textContent = 'НЕТ СВЯЗИ';
+        }
+
+        // Начальная загрузка + автообновление каждые 2 секунды
+        fetchStatus();
+        setInterval(fetchStatus, 2000);
+    </script>
+</body>
+</html>
