@@ -19,9 +19,11 @@ traffic.json
 /var/lib/swarm/
 
 # ─── Скомпилированные бинарники ───────────────────────────────
-swarm-node
-swarm-core
-swarm-monitor-bin
+# Только в корне репо — не трогать cmd/swarm-node/ и cmd/swarm-monitor/
+/swarm-node
+/swarm-core
+/swarm-monitor
+/swarm-monitor-bin
 tun2socks
 xray
 /bin/
