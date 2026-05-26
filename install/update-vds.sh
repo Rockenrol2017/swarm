@@ -44,7 +44,7 @@ if [ ! -d "$REMOTE_SRC/.git" ]; then
     git clone "$REPO_URL" "$REMOTE_SRC"
 else
     echo "→ Обновляем исходники..."
-    cd "$REMOTE_SRC" && git pull
+    cd "$REMOTE_SRC" && git fetch origin && git reset --hard origin/main
 fi
 
 cd "$REMOTE_SRC"
