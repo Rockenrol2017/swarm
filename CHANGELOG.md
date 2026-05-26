@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.1.0] — 2026-05-26
+
+### Added
+- Pre-built binaries for all platforms via GitHub Actions CI/CD
+- `install.sh` — one-command install without Go (auto-detects OS/arch)
+- `setup-bootstrap.sh` — one-command new VDS bootstrap setup
+- `update-vds.sh` — git pull + rebuild + restart on existing VDS
+- MsgPing keepalive every 25s — prevents QUIC idle disconnects
+- `BootstrapNodeID` verification — anti-spoofing protection
+- Multiple bootstrap support via `bootstrap_addrs[]` config field
+- TPROXY traffic counting (bytes_up/bytes_down via TPROXY path)
+- TPROXY auto-restore on service restart via systemd ExecStartPre
+
+### Fixed
+- `HandshakeIdleTimeout` set to 30s (default 5s too short for satellite, 3 RTT × 1900ms = 5.7s)
+- `MaxIdleTimeout` increased to 120s (keepalive pings every 25s)
+- `tproxy-rules.sh` now skips bootstrap/relay nodes (only needed on client)
+- `tproxy.go` build tag `//go:build linux` — compiles on macOS/Windows too
+- `update-vds.sh` uses `git reset --hard origin/main` (handles force push)
+- bytes_up/bytes_down now persist across restarts (saved to traffic.json)
+
+---
+
 ## [0.1.0-alpha] — 2026-05-25
 
 ### Added

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>S.W.A.R.M. — Decentralized P2P Mesh Network</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0d1117; color: #e6edf3; line-height: 1.6; }
+  a { color: #58a6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  header { text-align: center; padding: 80px 20px 40px; }
+  header h1 { font-size: 3rem; font-weight: 700; letter-spacing: 0.1em;
+              background: linear-gradient(135deg, #58a6ff, #3fb950);
+              -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  header p.subtitle { font-size: 1.1rem; color: #8b949e; margin-top: 8px; }
+  header p.tagline { font-size: 1.3rem; margin: 20px auto; max-width: 600px; color: #e6edf3; }
+
+  .badges { margin: 20px 0; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+
+  .install-box { background: #161b22; border: 1px solid #30363d; border-radius: 12px;
+                 max-width: 640px; margin: 40px auto; padding: 28px; text-align: left; }
+  .install-box h2 { font-size: 1rem; color: #8b949e; margin-bottom: 12px; text-transform: uppercase;
+                    letter-spacing: 0.08em; }
+  .install-box pre { background: #0d1117; border-radius: 8px; padding: 16px;
+                     font-size: 0.95rem; overflow-x: auto; color: #3fb950; }
+  .install-box .note { margin-top: 12px; font-size: 0.85rem; color: #8b949e; }
+
+  .features { max-width: 900px; margin: 60px auto; padding: 0 20px; }
+  .features h2 { text-align: center; font-size: 1.8rem; margin-bottom: 40px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 10px; padding: 22px; }
+  .card .icon { font-size: 1.8rem; margin-bottom: 10px; }
+  .card h3 { font-size: 1rem; margin-bottom: 8px; color: #e6edf3; }
+  .card p { font-size: 0.9rem; color: #8b949e; }
+
+  .how { max-width: 700px; margin: 60px auto; padding: 0 20px; text-align: center; }
+  .how h2 { font-size: 1.8rem; margin-bottom: 30px; }
+  .flow { background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+          padding: 28px; font-family: monospace; font-size: 0.9rem;
+          text-align: left; line-height: 2; }
+  .flow .dim { color: #8b949e; }
+  .flow .hi { color: #3fb950; }
+
+  .cta { text-align: center; padding: 60px 20px; }
+  .cta h2 { font-size: 2rem; margin-bottom: 16px; }
+  .cta p { color: #8b949e; margin-bottom: 28px; max-width: 500px; margin-left: auto; margin-right: auto; }
+  .btn { display: inline-block; background: #238636; color: #fff; padding: 12px 28px;
+         border-radius: 8px; font-size: 1rem; font-weight: 600; margin: 6px; }
+  .btn:hover { background: #2ea043; text-decoration: none; }
+  .btn.secondary { background: #21262d; border: 1px solid #30363d; }
+  .btn.secondary:hover { background: #30363d; }
+
+  footer { text-align: center; padding: 40px 20px; border-top: 1px solid #21262d;
+           color: #8b949e; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>S.W.A.R.M.</h1>
+  <p class="subtitle">Secure · Worldwide · Anonymous · Routing · Mesh</p>
+  <p class="tagline">A decentralized P2P encrypted mesh network.<br>
+    <strong>The more nodes — the faster and stronger for everyone.</strong></p>
+  <div class="badges">
+    <img src="https://img.shields.io/github/v/release/Rockenrol2017/swarm?color=brightgreen" alt="Release">
+    <img src="https://img.shields.io/github/actions/workflow/status/Rockenrol2017/swarm/release.yml?label=build" alt="Build">
+    <img src="https://img.shields.io/badge/License-GPLv3-blue.svg" alt="License">
+    <img src="https://img.shields.io/badge/Go-1.22+-blue.svg" alt="Go">
+  </div>
+</header>
+
+<div class="install-box">
+  <h2>⚡ Run a node — one command</h2>
+  <pre>curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install.sh | bash</pre>
+  <p class="note">Linux · Any VPS · Root access · Port 7437/UDP open · ~50 MB RAM</p>
+</div>
+
+<div class="features">
+  <h2>Why S.W.A.R.M.?</h2>
+  <div class="grid">
+    <div class="card">
+      <div class="icon">🔒</div>
+      <h3>End-to-end encrypted</h3>
+      <p>ChaCha20-Poly1305 + X25519 key exchange. Every packet is authenticated and encrypted.</p>
+    </div>
+    <div class="card">
+      <div class="icon">⚡</div>
+      <h3>QUIC transport</h3>
+      <p>Modern UDP-based protocol. Fast handshake, multiplexed streams, no head-of-line blocking.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🌍</div>
+      <h3>Decentralized</h3>
+      <p>No central servers. Every node you run makes the network stronger and faster for everyone.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🏠</div>
+      <h3>Whole-network protection</h3>
+      <p>Set up once on your home server. Every device — phone, TV, console — is automatically protected.</p>
+    </div>
+    <div class="card">
+      <div class="icon">📡</div>
+      <h3>Satellite optimized</h3>
+      <p>Works on high-latency satellite links. BBR congestion control, 30s handshake timeout.</p>
+    </div>
+    <div class="card">
+      <div class="icon">🔓</div>
+      <h3>Open source</h3>
+      <p>GPL v3. Full source code on GitHub. Verify every line yourself.</p>
+    </div>
+  </div>
+</div>
+
+<div class="how">
+  <h2>How it works</h2>
+  <div class="flow">
+    <span class="dim">[Phone, laptop, TV, console]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓ <span class="dim">transparent proxy — no config needed</span><br>
+    <span class="hi">[S.W.A.R.M. client node — your home server]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓ <span class="dim">QUIC · ChaCha20-Poly1305 · X25519</span><br>
+    <span class="hi">[Bootstrap node — VPS in another country]</span><br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+    <span class="dim">[Internet]</span>
+  </div>
+</div>
+
+<div class="cta">
+  <h2>Join the swarm</h2>
+  <p>Got a spare VPS? One command and you're helping everyone on the network.</p>
+  <a class="btn" href="https://github.com/Rockenrol2017/swarm">View on GitHub</a>
+  <a class="btn secondary" href="https://github.com/Rockenrol2017/swarm/releases/latest">Download</a>
+</div>
+
+<footer>
+  S.W.A.R.M. is open source software licensed under GPL v3.<br>
+  <a href="https://github.com/Rockenrol2017/swarm">github.com/Rockenrol2017/swarm</a>
+</footer>
+
+</body>
+</html>

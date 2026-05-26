@@ -4,9 +4,10 @@
 > A decentralized peer-to-peer encrypted mesh network.  
 > **The more nodes — the faster and stronger the network for everyone.**
 
+[![Release](https://img.shields.io/github/v/release/Rockenrol2017/swarm?color=brightgreen)](https://github.com/Rockenrol2017/swarm/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/Rockenrol2017/swarm/release.yml?label=build)](https://github.com/Rockenrol2017/swarm/actions)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Go Version](https://img.shields.io/badge/Go-1.22+-blue.svg)](https://golang.org)
-[![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
@@ -89,28 +90,29 @@ No need to install anything on each device.
 ### Bootstrap node (VPS) — one command
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install/setup-bootstrap.sh | bash
+curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install.sh | bash
 ```
 
-The script handles everything: Go installation, build, config, systemd service, firewall rules.  
-At the end it prints your node's IP and NodeID — share them to help others connect.
+No Go required — downloads a pre-built binary, sets up systemd, opens firewall ports automatically.  
+At the end it prints your node's IP and NodeID — add them to client configs to join the swarm.
+
+> **Prefer to build from source?**
+> ```bash
+> curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install/setup-bootstrap.sh | bash
+> ```
 
 ### Client node (home server)
 
 ```bash
-cat > /etc/swarm/node-config.json << EOF
-{
-  "mode": "client",
-  "bootstrap_addr": "YOUR_VPS_IP:7437",
-  "socks5_addr": ":1090",
-  "status_addr": ":19090",
-  "identity_file": "/etc/swarm/identity.json",
-  "traffic_file": "/var/lib/swarm/traffic.json",
-  "skyedge_limit_gb": 310
-}
-EOF
+# Install
+curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install.sh | bash
 
-sudo ./swarm-node -config /etc/swarm/node-config.json
+# Edit config
+nano /etc/swarm/node-config.json
+# Set: "mode": "client", "bootstrap_addr": "YOUR_VPS_IP:7437"
+
+# Restart
+systemctl restart swarm-node
 ```
 
 ### One-command satellite optimization
