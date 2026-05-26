@@ -44,6 +44,15 @@
   .flow .dim { color: #8b949e; }
   .flow .hi { color: #3fb950; }
 
+  .network { max-width: 700px; margin: 60px auto; padding: 0 20px; text-align: center; }
+  .network h2 { font-size: 1.8rem; margin-bottom: 30px; }
+  .nodes { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  .node { background: #161b22; border: 1px solid #238636; border-radius: 10px; padding: 20px 28px; min-width: 160px; }
+  .node .flag { font-size: 2rem; margin-bottom: 6px; }
+  .node .loc { font-size: 0.9rem; color: #8b949e; margin-bottom: 6px; }
+  .node .status { font-size: 0.85rem; color: #3fb950; font-weight: 600; }
+  .network .note { font-size: 0.9rem; color: #8b949e; margin-top: 16px; }
+
   .cta { text-align: center; padding: 60px 20px; }
   .cta h2 { font-size: 2rem; margin-bottom: 16px; }
   .cta p { color: #8b949e; margin-bottom: 28px; max-width: 500px; margin-left: auto; margin-right: auto; }
@@ -125,6 +134,29 @@
     &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
     <span class="dim">[Internet]</span>
   </div>
+</div>
+
+<div class="network">
+  <h2>🌐 Live Network</h2>
+  <div class="nodes">
+    <div class="node">
+      <div class="flag">🇸🇪</div>
+      <div class="loc">Stockholm, Sweden</div>
+      <div class="status">● Active</div>
+    </div>
+    <div class="node">
+      <div class="flag">🇩🇪</div>
+      <div class="loc">Frankfurt, Germany</div>
+      <div class="status">● Active</div>
+    </div>
+    <div class="node">
+      <div class="flag">🇺🇸</div>
+      <div class="loc">New York, USA</div>
+      <div class="status">● Active</div>
+    </div>
+  </div>
+  <p class="note">Bootstrap addresses are included automatically in <code>install.sh</code>.<br>
+  Add your own node to grow the swarm.</p>
 </div>
 
 <div class="cta">

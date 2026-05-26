@@ -33,6 +33,21 @@ After ~2 minutes your node is running and serving the swarm. 🎉
 
 ---
 
+## 🌐 Live Network
+
+The swarm is already running. Connect your client to any of these bootstrap nodes:
+
+| Location | Status |
+|----------|--------|
+| 🇸🇪 Stockholm, Sweden | ✅ Active |
+| 🇩🇪 Frankfurt, Germany | ✅ Active |
+| 🇺🇸 New York, USA | ✅ Active |
+
+Bootstrap addresses are included automatically when you install with `install.sh`.  
+The more nodes — the more resilient and faster the network for everyone.
+
+---
+
 ## What is S.W.A.R.M.?
 
 S.W.A.R.M. is a self-hosted decentralized mesh network written in Go.
