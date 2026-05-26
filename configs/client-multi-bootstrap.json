@@ -3,10 +3,10 @@
   "socks5_addr": ":1090",
   "status_addr": ":19090",
   "identity_file": "/etc/swarm/identity.json",
-  "bootstrap_addr": "BOOTSTRAP_1_IP:7437",
+  "bootstrap_addr": "193.68.89.168:7437",
   "bootstrap_addrs": [
-    "BOOTSTRAP_2_IP:7437",
-    "BOOTSTRAP_3_IP:7437"
+    "78.17.74.239:7437",
+    "166.1.89.52:7437"
   ],
   "max_peers": 50
 }

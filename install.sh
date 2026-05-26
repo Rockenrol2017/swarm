@@ -110,7 +110,7 @@ if [ ! -f "${CONFIG_DIR}/node-config.json" ]; then
   "socks5_addr": ":1090",
   "identity_file": "/etc/swarm/identity.json",
   "bootstrap_addr": "193.68.89.168:7437",
-  "bootstrap_addrs": ["132.243.213.6:7437", "192.177.26.9:7437"],
+  "bootstrap_addrs": ["78.17.74.239:7437", "166.1.89.52:7437"],
   "max_peers": 50,
   "status_addr": ":19090"
 }
