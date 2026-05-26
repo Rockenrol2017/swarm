@@ -1,0 +1,108 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build binaries
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            suffix: linux-amd64
+          - goos: linux
+            goarch: arm64
+            suffix: linux-arm64
+          - goos: linux
+            goarch: arm
+            goarm: 7
+            suffix: linux-armv7
+          - goos: darwin
+            goarch: amd64
+            suffix: darwin-amd64
+          - goos: darwin
+            goarch: arm64
+            suffix: darwin-arm64
+          - goos: windows
+            goarch: amd64
+            suffix: windows-amd64.exe
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          GOARM: ${{ matrix.goarm }}
+          CGO_ENABLED: 0
+        run: |
+          GOFLAGS=-mod=mod go build -trimpath -ldflags="-s -w -X main.version=${{ github.ref_name }}" \
+            -o swarm-node-${{ matrix.suffix }} ./cmd/swarm-node/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: swarm-node-${{ matrix.suffix }}
+          path: swarm-node-${{ matrix.suffix }}
+
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+
+      - name: Create checksums
+        run: |
+          cd dist
+          sha256sum swarm-node-* > checksums.txt
+          cat checksums.txt
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/swarm-node-*
+            dist/checksums.txt
+          body: |
+            ## S.W.A.R.M. ${{ github.ref_name }}
+
+            ### Quick install (Linux/macOS)
+            ```bash
+            curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install.sh | bash
+            ```
+
+            ### Manual download
+            Pick the binary for your platform below.
+
+            | Platform | File |
+            |----------|------|
+            | Linux x64 | `swarm-node-linux-amd64` |
+            | Linux ARM64 | `swarm-node-linux-arm64` |
+            | Linux ARMv7 (Raspberry Pi) | `swarm-node-linux-armv7` |
+            | macOS Intel | `swarm-node-darwin-amd64` |
+            | macOS Apple Silicon | `swarm-node-darwin-arm64` |
+            | Windows x64 | `swarm-node-windows-amd64.exe` |
+
+            Verify checksums with `checksums.txt`.
