@@ -8,6 +8,16 @@
 
 set -e
 
+# Пропускаем если режим не client (bootstrap/relay не нуждаются в TPROXY перехвате)
+CONFIG="/etc/swarm/node-config.json"
+if [ -f "$CONFIG" ]; then
+    MODE=$(python3 -c "import json; print(json.load(open('$CONFIG')).get('mode',''))" 2>/dev/null || true)
+    if [ "$MODE" = "bootstrap" ] || [ "$MODE" = "relay" ]; then
+        echo "[swarm-tproxy] режим $MODE — TPROXY правила не нужны, пропускаем"
+        exit 0
+    fi
+fi
+
 TPROXY_PORT=12346
 MARK=0x2
 TABLE=101

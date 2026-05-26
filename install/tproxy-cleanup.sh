@@ -3,6 +3,15 @@
 #
 # Вызывается из systemd ExecStopPost (с флагом '-' — ошибки игнорируются).
 
+# Пропускаем если режим не client
+CONFIG="/etc/swarm/node-config.json"
+if [ -f "$CONFIG" ]; then
+    MODE=$(python3 -c "import json; print(json.load(open('$CONFIG')).get('mode',''))" 2>/dev/null || true)
+    if [ "$MODE" = "bootstrap" ] || [ "$MODE" = "relay" ]; then
+        exit 0
+    fi
+fi
+
 MARK=0x2
 TABLE=101
 
