@@ -51,6 +51,8 @@ curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install.sh 
 Bootstrap адреса включены автоматически при установке через `install.sh`.  
 Чем больше узлов — тем надёжнее и быстрее сеть для всех участников.
 
+📊 **[Живой статус сети →](https://stats.uptimerobot.com/p5plfaprdV)**
+
 ---
 
 ## Что это

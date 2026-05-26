@@ -46,6 +46,8 @@ The swarm is already running. Connect your client to any of these bootstrap node
 Bootstrap addresses are included automatically when you install with `install.sh`.  
 The more nodes — the more resilient and faster the network for everyone.
 
+📊 **[Live network status →](https://stats.uptimerobot.com/p5plfaprdV)**
+
 ---
 
 ## What is S.W.A.R.M.?
