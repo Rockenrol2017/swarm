@@ -1,0 +1,12 @@
+{
+  "mode": "client",
+  "socks5_addr": ":1090",
+  "status_addr": ":19090",
+  "identity_file": "/etc/swarm/identity.json",
+  "bootstrap_addr": "BOOTSTRAP_1_IP:7437",
+  "bootstrap_addrs": [
+    "BOOTSTRAP_2_IP:7437",
+    "BOOTSTRAP_3_IP:7437"
+  ],
+  "max_peers": 50
+}

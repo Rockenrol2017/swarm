@@ -1,0 +1,9 @@
+{
+  "mode": "client",
+  "socks5_addr": ":1090",
+  "status_addr": ":19090",
+  "identity_file": "/etc/swarm/identity.json",
+  "bootstrap_addr": "YOUR_VPS_IP:7437",
+  "bootstrap_addrs": [],
+  "max_peers": 50
+}

@@ -1,0 +1,8 @@
+{
+  "mode": "relay",
+  "listen_addr": ":7437",
+  "status_addr": ":19090",
+  "identity_file": "/etc/swarm/identity.json",
+  "bootstrap_addr": "YOUR_BOOTSTRAP_IP:7437",
+  "max_peers": 100
+}

@@ -1,0 +1,7 @@
+{
+  "mode": "bootstrap",
+  "listen_addr": ":7437",
+  "status_addr": ":19090",
+  "identity_file": "/etc/swarm/identity.json",
+  "max_peers": 200
+}
