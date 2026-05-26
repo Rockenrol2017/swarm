@@ -42,7 +42,6 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: '1.22'
-          cache: false
 
       - name: Build
         env:
@@ -50,9 +49,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           GOARM: ${{ matrix.goarm }}
           CGO_ENABLED: 0
-          GOFLAGS: -mod=mod
           GONOSUMDB: "*"
-          GONOSUMCHECK: "*"
         run: |
           go build -trimpath -ldflags="-s -w" \
             -o swarm-node-${{ matrix.suffix }} ./cmd/swarm-node/

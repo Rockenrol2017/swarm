@@ -4,9 +4,10 @@
 > Децентрализованная P2P зашифрованная меш-сеть.  
 > **Чем больше узлов — тем быстрее и надёжнее сеть для всех.**
 
+[![Release](https://img.shields.io/github/v/release/Rockenrol2017/swarm?color=brightgreen)](https://github.com/Rockenrol2017/swarm/releases/latest)
+[![Build](https://img.shields.io/github/actions/workflow/status/Rockenrol2017/swarm/release.yml?label=build)](https://github.com/Rockenrol2017/swarm/actions)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Go](https://img.shields.io/badge/Go-1.22+-blue.svg)](https://golang.org)
-[![Status](https://img.shields.io/badge/Status-Alpha-orange.svg)]()
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 ---
@@ -19,13 +20,18 @@
 Никакой настройки. Никакого обслуживания. Запустил и забыл.
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install/setup-bootstrap.sh | bash
+curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install.sh | bash
 ```
 
 **Требования:** Linux VPS (любой хостинг) · Root доступ · Порт 7437/UDP открыт · ~50 МБ RAM
 
-Скрипт автоматически установит Go, соберёт узел, настроит systemd и откроет порты в файрволе.  
-Через ~2 минуты твой узел работает и обслуживает рой. 🎉
+Скрипт автоматически скачивает готовый бинарник, настраивает systemd и открывает порты.  
+Через ~1 минуту твой узел работает и обслуживает рой. 🎉
+
+> 💡 **Хочешь собрать из исходников?**
+> ```bash
+> curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install/setup-bootstrap.sh | bash
+> ```
 
 > 💡 **Чем разнообразнее география узлов — тем лучше.**  
 > Франкфурт, Хельсинки, Сингапур, Нью-Йорк — каждая локация важна.
@@ -38,7 +44,7 @@ S.W.A.R.M. — самохостируемая децентрализованна
 Создаёт зашифрованный туннель между вашими устройствами и выходными узлами
 через QUIC транспорт и шифрование ChaCha20-Poly1305.
 
-Каждый участник усиляет сеть. Нет центральных серверов.
+Каждый участник усиливает сеть. Нет центральных серверов.
 Нет единой точки отказа.
 
 ---
@@ -67,10 +73,9 @@ S.W.A.R.M. — самохостируемая децентрализованна
 - **QUIC транспорт** — быстрый, современный, UDP
 - **ChaCha20-Poly1305** — аутентифицированное шифрование, быстрое на любом железе
 - **X25519 + Ed25519** — современный обмен ключами и подпись идентичности
-- **Прозрачный прокси** — перехватывает трафик на уровне ОС (TPROXY)
+- **Прозрачный прокси** — перехватывает трафик на уровне ОС (TPROXY, только Linux)
 - **3 режима узла** — bootstrap, relay, client
-- **2-hop relay** — Client → Relay → Bootstrap → Internet
-- **Мониторинг трафика** — счётчики день/месяц, поддержка лимитных тарифов
+- **Мониторинг трафика** — счётчики день/месяц, сохраняются при перезагрузке
 - **RTT проба** — мониторинг качества туннеля каждые 30 секунд
 - **Веб-дашборд** — реальная статистика на порту 8081
 - **Оптимизация для спутника** — BBR, большие TCP буферы, DNS кэш
@@ -80,59 +85,37 @@ S.W.A.R.M. — самохостируемая децентрализованна
 
 ## Быстрый старт
 
-### Требования
-
-- Linux (Ubuntu 20.04+ / Debian 12+)
-- Go 1.22+
-- Root доступ (для TPROXY)
-
-### Bootstrap узел (VPS)
+### Bootstrap узел (VPS) — одна команда
 
 ```bash
-git clone https://github.com/Rockenrol2017/swarm
-cd swarm
-
-# Сборка
-go build -o swarm-node ./cmd/swarm-node/
-
-# Конфиг
-cat > /etc/swarm/node-config.json << EOF
-{
-  "mode": "bootstrap",
-  "listen_addr": ":7437",
-  "status_addr": ":19090",
-  "identity_file": "/etc/swarm/identity.json"
-}
-EOF
-
-# Запуск
-sudo ./swarm-node -config /etc/swarm/node-config.json
+curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install.sh | bash
 ```
+
+Go не нужен — скачивается готовый бинарник, systemd настраивается автоматически.
 
 ### Client узел (домашний сервер)
 
 ```bash
-cat > /etc/swarm/node-config.json << EOF
-{
-  "mode": "client",
-  "bootstrap_addr": "IP_ВАШЕГО_VPS:7437",
-  "socks5_addr": ":1090",
-  "status_addr": ":19090",
-  "identity_file": "/etc/swarm/identity.json",
-  "traffic_file": "/var/lib/swarm/traffic.json"
-}
-EOF
+# Установка
+curl -sSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install.sh | bash
 
-sudo ./swarm-node -config /etc/swarm/node-config.json
+# Редактируем конфиг
+nano /etc/swarm/node-config.json
+# Укажи: "mode": "client", "bootstrap_addr": "IP_ВАШЕГО_VPS:7437"
+
+# Перезапуск
+systemctl restart swarm-node
 ```
 
-### Оптимизация для спутника
+### Проверка
 
 ```bash
-sudo bash install/optimize-satellite.sh
-```
+# Статус
+curl http://localhost:19090/api/status
 
-Включает BBR, увеличивает TCP буферы до 16МБ, устанавливает DNS кэш dnsmasq.
+# Логи
+journalctl -u swarm-node -f
+```
 
 ---
 
@@ -140,26 +123,22 @@ sudo bash install/optimize-satellite.sh
 
 ```
 swarm/
-├── cmd/
-│   ├── swarm-node/        # Основной бинарник узла
-│   └── swarm-monitor/     # Бинарник веб-дашборда
+├── cmd/swarm-node/        # Основной бинарник
 ├── pkg/swarmnode/
 │   ├── node.go            # Жизненный цикл, управление пирами
-│   ├── peer.go            # QUIC соединения, relay форвардинг
+│   ├── peer.go            # QUIC соединения, keepalive
 │   ├── socks5.go          # Встроенный SOCKS5 прокси
-│   ├── tproxy.go          # Прозрачный прокси (SO_TRANSPARENT)
+│   ├── tproxy.go          # Прозрачный прокси (только Linux)
 │   ├── traffic.go         # Персистентные счётчики трафика
-│   ├── latency.go         # RTT проба до bootstrap узла
-│   └── status.go          # HTTP статус API
+│   └── status.go          # HTTP статус API :19090
 ├── pkg/swarmproto/
-│   ├── handshake.go       # Крипто рукопожатие: X25519 + Ed25519
-│   ├── cipher.go          # Шифрование ChaCha20-Poly1305
-│   └── packet.go          # Протокол передачи данных
-├── swarm-monitor/
-│   └── index.html         # Веб-дашборд UI
+│   ├── handshake.go       # X25519 + Ed25519 рукопожатие
+│   ├── cipher.go          # ChaCha20-Poly1305
+│   └── packet.go          # Протокол фреймов
 └── install/
-    ├── optimize-satellite.sh  # BBR + настройка буферов
-    ├── redeploy.sh            # Сборка и деплой
+    ├── install.sh             # One-liner установка
+    ├── setup-bootstrap.sh     # Настройка нового VDS
+    ├── update-vds.sh          # Обновление существующего VDS
     └── systemd/               # Systemd unit файлы
 ```
 
@@ -172,19 +151,18 @@ swarm/
 ```json
 {
   "mode": "client",
+  "node_id": "...",
+  "uptime": "2h34m",
   "peers": 1,
   "bytes_up": 1234567,
   "bytes_down": 9876543,
   "bytes_today": 11111110,
   "bytes_month": 11111110,
-  "limit_gb": 310,
-  "limit_percent": 0.003,
   "latency_ms": 1450
 }
 ```
 
-`GET /health` — проверка доступности
-
+`GET /health` — проверка доступности  
 `GET /api/peers` — список подключённых пиров
 
 ---
@@ -207,7 +185,7 @@ swarm/
 - **Нет логов** — содержимое трафика никогда не записывается
 - **Открытый код** — полный аудит возможен
 
-Об уязвимостях сообщайте приватно — не через публичные Issues.
+Об уязвимостях сообщайте приватно — не через публичные Issues.  
 См. [SECURITY.md](SECURITY.md).
 
 ---
@@ -216,26 +194,22 @@ swarm/
 
 - [x] QUIC транспорт с ChaCha20-Poly1305
 - [x] Режимы bootstrap, relay, client
-- [x] 2-hop relay форвардинг
 - [x] Прозрачный прокси (TPROXY)
-- [x] Мониторинг трафика (день/месяц)
-- [x] RTT проба
-- [x] Веб-дашборд
-- [x] Оптимизация для спутника
+- [x] Мониторинг трафика (день/месяц, персистентный)
+- [x] Готовые бинарники для всех платформ (CI/CD)
+- [x] Оптимизация для спутниковых каналов
 - [ ] DHT peer discovery (без bootstrap)
 - [ ] Android клиент
-- [ ] Windows клиент
+- [ ] Windows / macOS клиент с GUI
 - [ ] Блокировка рекламы (DNS)
-- [ ] Семейный режим
 
 ---
 
 ## Участие в разработке
 
-Нужна помощь в направлениях:
+Нужна помощь:
 
-- Клиент для Windows / macOS
-- Приложение Android / iOS
+- Клиент для Windows / macOS / Android / iOS
 - Улучшение веб-интерфейса
 - Аудит безопасности
 - Переводы и документация
