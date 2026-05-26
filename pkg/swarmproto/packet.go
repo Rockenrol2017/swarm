@@ -41,8 +41,10 @@ const (
 	SessionIDSize = 32
 	HeaderSize    = VersionSize + TimestampSize + SessionIDSize
 
-	// Допустимое расхождение часов между узлами
-	MaxClockSkew = 90 * time.Second
+	// Допустимое расхождение часов между узлами.
+	// 5 минут — стандарт Kerberos/NTP. Защищает от replay-атак,
+	// при этом не ломается на свежих VPS где NTP ещё не успел синхронизироваться.
+	MaxClockSkew = 5 * time.Minute
 
 	// Максимальный размер одного кадра (1MB)
 	MaxFrameSize = 1 << 20
