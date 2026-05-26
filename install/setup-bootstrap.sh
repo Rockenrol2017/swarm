@@ -26,6 +26,29 @@ echo "║   S.W.A.R.M. Bootstrap Setup            ║"
 echo "╚══════════════════════════════════════════╝"
 echo ""
 
+# ─── 0. Синхронизация часов ───────────────────────────────────────────────────
+# Критично: handshake проверяет временну́ю метку (скос > 1м30с = отказ).
+# Новые VDS часто стартуют с рассинхронизированными часами.
+echo "▶ [0/5] Синхронизация времени..."
+if command -v timedatectl &>/dev/null; then
+    timedatectl set-ntp true 2>/dev/null || true
+fi
+# Принудительная синхронизация через chronyc или systemd-timesyncd
+if command -v chronyc &>/dev/null; then
+    chronyc makestep 2>/dev/null && echo "✓ Часы синхронизированы (chrony)" || true
+elif systemctl is-active systemd-timesyncd &>/dev/null; then
+    # Ждём синхронизации до 30 секунд
+    for i in $(seq 1 6); do
+        sleep 5
+        if timedatectl show --property=NTPSynchronized --value 2>/dev/null | grep -q "yes"; then
+            echo "✓ Часы синхронизированы (timesyncd)"
+            break
+        fi
+    done
+fi
+CURRENT_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+echo "  Текущее время: $CURRENT_TIME"
+
 # ─── 1. Go ───────────────────────────────────────────────────────────────────
 if ! command -v go &>/dev/null && [ ! -x /tmp/go/bin/go ] && [ ! -x /usr/local/go/bin/go ]; then
     echo "▶ [1/5] Устанавливаем Go..."
@@ -44,7 +67,7 @@ echo "▶ [2/5] Клонируем репозиторий..."
 if [ ! -d "$REMOTE_SRC/.git" ]; then
     git clone "$REPO_URL" "$REMOTE_SRC"
 else
-    cd "$REMOTE_SRC" && git pull
+    cd "$REMOTE_SRC" && git fetch origin && git reset --hard origin/main
 fi
 cd "$REMOTE_SRC"
 echo "✓ Исходники готовы"

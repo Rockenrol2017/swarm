@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.1] — 2026-05-26
+
+### Fixed
+- `setup-bootstrap.sh` now syncs system clock before starting (NTP clock skew > 1m30s caused handshake failure on fresh VPS)
+- `setup-bootstrap.sh` uses `git reset --hard origin/main` instead of `git pull` (handles force push)
+- `update-vds.sh` now copies tproxy scripts to `/usr/local/share/swarm/` on each update
+- Example configs updated with current bootstrap IPs
+
+### Added
+- `configs/` directory with example configs for all node modes (bootstrap, relay, client, client-multi-bootstrap)
+- Relay mode end-to-end tested: Client → Relay → Bootstrap → Internet chain confirmed
+
+---
+
 ## [0.1.0] — 2026-05-26
 
 ### Added
