@@ -63,8 +63,11 @@ echo "→ Устанавливаем бинарник..."
 mv /tmp/swarm-node-new /usr/local/bin/swarm-node
 chmod +x /usr/local/bin/swarm-node
 
-echo "→ Обновляем systemd unit..."
+echo "→ Обновляем systemd unit и скрипты..."
 cp install/systemd/swarm-node.service /etc/systemd/system/
+mkdir -p /usr/local/share/swarm
+cp install/tproxy-rules.sh install/tproxy-cleanup.sh /usr/local/share/swarm/
+chmod +x /usr/local/share/swarm/tproxy-rules.sh /usr/local/share/swarm/tproxy-cleanup.sh
 systemctl daemon-reload
 
 echo "→ Запускаем..."
