@@ -1,3 +1,5 @@
+//go:build linux
+
 package swarmnode
 
 // tproxy.go — прозрачный прокси (TPROXY).
