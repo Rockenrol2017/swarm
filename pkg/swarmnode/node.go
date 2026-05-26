@@ -286,6 +286,7 @@ func (n *Node) startListener() error {
 	}
 	qcfg := &quic.Config{
 		MaxIdleTimeout:       120 * time.Second, // keepalive пингует каждые 25с — 120с запас
+		HandshakeIdleTimeout: 30 * time.Second,  // спутник: 3 RTT × 1900мс = 5.7с → нужен запас
 		KeepAlivePeriod:      10 * time.Second,
 		MaxIncomingStreams:    1000,
 		MaxIncomingUniStreams: -1,
@@ -387,8 +388,9 @@ func (n *Node) dialPeer(addr string) error {
 		NextProtos:         []string{"swarm-v1"},
 	}
 	qcfg := &quic.Config{
-		MaxIdleTimeout:  120 * time.Second,
-		KeepAlivePeriod: 10 * time.Second,
+		MaxIdleTimeout:       120 * time.Second,
+		HandshakeIdleTimeout: 30 * time.Second, // спутник: рукопожатие может занять 5-6с
+		KeepAlivePeriod:      10 * time.Second,
 	}
 
 	conn, err := quic.DialAddr(n.ctx, addr, tlsCfg, qcfg)
