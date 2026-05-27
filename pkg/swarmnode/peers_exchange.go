@@ -151,6 +151,9 @@ func (n *Node) handlePeerList(from *Peer, payload []byte) {
 			continue
 		}
 
+		// Сохраняем в DHT peer cache (рой выживает без VDS)
+		go n.peerCache.Add(pi.Addr, fmt.Sprintf("%x", pi.NodeID))
+
 		// Подключаемся в фоне
 		go func(addr string) {
 			log.Printf("[peers] подключаемся к новому пиру: %s", addr)

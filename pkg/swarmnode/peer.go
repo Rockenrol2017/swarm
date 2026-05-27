@@ -20,12 +20,16 @@ import (
 type MsgType uint8
 
 const (
-	MsgConnect MsgType = 0x01 // запрос подключения к хосту
-	MsgData    MsgType = 0x02 // данные
-	MsgClose   MsgType = 0x03 // закрытие
-	MsgPing    MsgType = 0x04 // keepalive
-	MsgPong    MsgType = 0x05
-	MsgPeers   MsgType = 0x06 // список известных пиров (DHT)
+	MsgConnect      MsgType = 0x01 // запрос подключения к хосту
+	MsgData         MsgType = 0x02 // данные
+	MsgClose        MsgType = 0x03 // закрытие
+	MsgPing         MsgType = 0x04 // keepalive
+	MsgPong         MsgType = 0x05
+	MsgPeers        MsgType = 0x06 // список известных пиров (DHT)
+	MsgRelayReady   MsgType = 0x07 // клиент готов к relay — сообщает bootstrap о своей готовности
+	MsgRelayRequest MsgType = 0x08 // bootstrap просит клиента форвардировать поток
+	MsgRelayAccept  MsgType = 0x09 // клиент принял запрос relay
+	MsgRelayReject  MsgType = 0x0A // клиент перегружен, отклоняет запрос
 )
 
 // Peer — активное соединение с другим узлом роя.
@@ -40,6 +44,15 @@ type Peer struct {
 	// isOutgoing = false: к нам подключились (client)
 	// Важно для relay режима: selectUpstreamPeer() выбирает только outgoing пиров.
 	isOutgoing bool
+
+	// LatencyMs — измеренная задержка до этого пира (RTT keepalive ping/pong).
+	// 0 = ещё не измерено, -1 = недоступен, >0 = RTT в мс.
+	// Используется selectPeer() для выбора самого быстрого upstream.
+	LatencyMs atomic.Int64
+
+	// Гео-информация (заполняется асинхронно из geo.go при подключении).
+	Country string // "DE", "US", "SE", "RU", ... (ISO 3166-1 alpha-2)
+	IPType  string // "residential" | "datacenter" | "" (не определено)
 
 	// Статистика
 	bytesSent   atomic.Int64
@@ -146,8 +159,20 @@ func (p *Peer) handleStream(stream quic.Stream) {
 			p.node.handlePeerList(p, payload)
 		}
 
+	case MsgRelayReady:
+		// Клиент сообщает о готовности к relay (на bootstrap)
+		if p.node != nil {
+			p.node.handleRelayReady(p, payload)
+		}
+
+	case MsgRelayRequest:
+		// Bootstrap просит нас форвардировать трафик (на client)
+		if p.node != nil {
+			p.node.handleRelayRequest(p, payload)
+		}
+
 	default:
-		log.Printf("[peer %s] unknown msg type: %d", p.NodeIDShort(), msgType)
+		log.Printf("[peer %s] unknown msg type: 0x%02x", p.NodeIDShort(), msgType)
 	}
 }
 
@@ -287,7 +312,8 @@ func bridgeStreamTCP(stream quic.Stream, target net.Conn,
 }
 
 // runKeepalive отправляет MsgPing каждые 25 секунд чтобы предотвратить
-// срабатывание QUIC idle timeout (MaxIdleTimeout=30s в node.go).
+// срабатывание QUIC idle timeout (MaxIdleTimeout=120s в node.go).
+// Заодно измеряет RTT до пира и сохраняет в p.LatencyMs.
 // Запускается горутиной из Node.addPeer для каждого пира.
 func (p *Peer) runKeepalive(ctx context.Context) {
 	ticker := time.NewTicker(25 * time.Second)
@@ -306,8 +332,14 @@ func (p *Peer) runKeepalive(ctx context.Context) {
 			if err != nil {
 				return // соединение мертво — node.connectToAddr переподключит
 			}
+			start := time.Now()
 			writeMsg(stream, p.sendCipher, MsgPing, nil)
 			stream.Close()
+			// RTT = время отправки ping (не полный round-trip, но достаточно для сравнения)
+			rtt := time.Since(start).Milliseconds()
+			if rtt > 0 {
+				p.LatencyMs.Store(rtt)
+			}
 		}
 	}
 }

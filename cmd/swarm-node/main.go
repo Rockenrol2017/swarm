@@ -147,9 +147,29 @@ func applyDefaults(cfg *swarmnode.Config) {
 		cfg.TrafficFile = "/var/lib/swarm/traffic.json"
 	}
 	// SkyEdge лимит по умолчанию: 310 ГБ/мес полной скорости.
-	// После лимита скорость плавно снижается (не обрывается).
-	// Предупреждение при 90% (~280 ГБ).
 	if cfg.SkyEdgeLimitGB == 0 && cfg.Mode == "client" {
 		cfg.SkyEdgeLimitGB = 310.0
+	}
+	// MaxRelayPercent: сколько % канала отдаём рою.
+	// Дефолт: 20% для client (экономия спутникового трафика), 100% для bootstrap/relay.
+	if cfg.MaxRelayPercent == 0 {
+		if cfg.Mode == "client" {
+			cfg.MaxRelayPercent = 20
+		} else {
+			cfg.MaxRelayPercent = 100
+		}
+	}
+	// Обратная совместимость: если только BootstrapAddr задан → добавляем в BootstrapAddrs
+	if cfg.BootstrapAddr != "" {
+		found := false
+		for _, a := range cfg.BootstrapAddrs {
+			if a == cfg.BootstrapAddr {
+				found = true
+				break
+			}
+		}
+		if !found {
+			cfg.BootstrapAddrs = append(cfg.BootstrapAddrs, cfg.BootstrapAddr)
+		}
 	}
 }

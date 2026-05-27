@@ -20,6 +20,7 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -49,6 +50,10 @@ type Config struct {
 	// Мониторинг трафика (SkyEdge лимит)
 	TrafficFile    string  `json:"traffic_file"`     // путь для сохранения счётчиков (/var/lib/swarm/traffic.json)
 	SkyEdgeLimitGB float64 `json:"skyedge_limit_gb"` // лимит в ГБ (0 = отключено)
+
+	// Обратный туннель: сколько % пропускной способности отдавать роям.
+	// 0 = дефолт (20% для client, 100% для bootstrap).
+	MaxRelayPercent int `json:"max_relay_percent"`
 }
 
 // Node — узел роя.
@@ -59,7 +64,7 @@ type Node struct {
 	mu    sync.RWMutex
 	peers map[[32]byte]*Peer // nodeID → peer
 
-	// Round-robin счётчик для выбора пира
+	// Round-robin счётчик для выбора пира (fallback когда нет latency данных)
 	peerIdx uint64 // atomic
 
 	// Persistent traffic accounting: выживает рестарты.
@@ -67,10 +72,18 @@ type Node struct {
 	// Используется для мониторинга лимита SkyEdge.
 	traffic *trafficStore
 
-	// RTT до bootstrap в миллисекундах.
+	// RTT до bootstrap в миллисекундах (HTTP probe, latency.go).
 	// 0 = не измерено, -1 = недоступен, >0 = RTT.
 	// Обновляется runLatencyProbe каждые 30с.
 	latencyMs atomic.Int64
+
+	// peerCache — персистентный кэш известных пиров (DHT-заглушка).
+	// Позволяет рою работать без bootstrap — загружает peers.json при старте.
+	peerCache *PeerCache
+
+	// bw — монитор пропускной способности канала (bandwidth.go).
+	// Используется обратным туннелем для принятия решения о relay.
+	bw *BandwidthMonitor
 
 	// QUIC listener (только для relay/bootstrap режима)
 	listener *quic.Listener
@@ -88,6 +101,15 @@ func New(cfg *Config) (*Node, error) {
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// Инициализируем peer cache — загружаем с диска если есть
+	cache := newPeerCache("/var/lib/swarm/peers.json", 500)
+	if err := cache.Load(); err != nil {
+		log.Printf("[dht] пустой кэш пиров: %v", err)
+	} else {
+		log.Printf("[dht] загружено %d пиров из кэша", cache.Len())
+	}
+
 	return &Node{
 		cfg:       cfg,
 		identity:  id,
@@ -96,6 +118,8 @@ func New(cfg *Config) (*Node, error) {
 		ctx:       ctx,
 		cancel:    cancel,
 		traffic:   newTrafficStore(cfg.TrafficFile),
+		peerCache: cache,
+		bw:        newBandwidthMonitor(),
 	}, nil
 }
 
@@ -107,6 +131,12 @@ func (n *Node) NodeID() string {
 // Start запускает узел.
 func (n *Node) Start() error {
 	log.Printf("[node] Запуск узла %s... (режим: %s)", n.NodeID()[:16], n.cfg.Mode)
+
+	// Запускаем монитор пропускной способности (Linux: читает /proc/net/dev)
+	go n.bw.start(n.ctx)
+
+	// Периодическое сохранение peer cache на диск
+	go n.peerCache.startPeriodicSave(n.ctx)
 
 	switch n.cfg.Mode {
 	case "bootstrap":
@@ -123,11 +153,11 @@ func (n *Node) Start() error {
 			return fmt.Errorf("listener: %w", err)
 		}
 		go n.acceptLoop()
-		go n.connectToBootstrap() // upstream для форвардинга
+		go n.connectToBootstrapOrCache() // upstream для форвардинга
 
 	case "client":
 		// Клиент: только исходящие соединения к bootstrap/relay
-		go n.connectToBootstrap()
+		go n.connectToBootstrapOrCache()
 	}
 
 	// SOCKS5 прокси для браузеров/приложений
@@ -151,7 +181,6 @@ func (n *Node) Start() error {
 	}
 
 	// Периодическое сохранение счётчиков трафика (каждые 60с)
-	// Актуально только для client режима с настроенным TrafficFile.
 	if n.traffic != nil && n.cfg.TrafficFile != "" {
 		go n.runTrafficSaver()
 	}
@@ -180,6 +209,12 @@ func (n *Node) Stop() {
 	if n.traffic != nil {
 		n.traffic.save()
 	}
+	// Сохраняем peer cache перед выходом
+	if n.peerCache != nil {
+		if err := n.peerCache.Save(); err != nil {
+			log.Printf("[dht] ошибка сохранения peer cache: %v", err)
+		}
+	}
 	log.Printf("[node] Остановлен")
 }
 
@@ -201,8 +236,9 @@ func (n *Node) PeerCount() int {
 	return len(n.peers)
 }
 
-// selectPeer выбирает пир для маршрутизации (round-robin по всем активным).
-// Используется SOCKS5/TPROXY на client-узле: выбирает любой доступный upstream.
+// selectPeer выбирает пир с минимальной задержкой (latency-first).
+// Fallback: round-robin если latency не измерена.
+// Используется SOCKS5/TPROXY на client-узле.
 func (n *Node) selectPeer() *Peer {
 	n.mu.RLock()
 	peers := make([]*Peer, 0, len(n.peers))
@@ -220,9 +256,61 @@ func (n *Node) selectPeer() *Peer {
 		return peers[0]
 	}
 
-	// Round-robin: атомарно увеличиваем счётчик
+	// Latency-first: выбираем пир с наименьшим RTT
+	var best *Peer
+	var bestLat int64 = 1<<62
+	for _, p := range peers {
+		if lat := p.LatencyMs.Load(); lat > 0 && lat < bestLat {
+			bestLat = lat
+			best = p
+		}
+	}
+	if best != nil {
+		return best
+	}
+
+	// Fallback: round-robin если latency ещё не измерена
 	idx := atomic.AddUint64(&n.peerIdx, 1)
 	return peers[int(idx)%len(peers)]
+}
+
+// selectPeerForDomain выбирает оптимальный пир для заданного домена.
+// Для гео-ограниченного контента — пир с нужной страной/типом.
+// Fallback: обычный selectPeer().
+func (n *Node) selectPeerForDomain(domain string) *Peer {
+	rules := geoRulesForDomain(domain)
+	if len(rules) == 0 {
+		return n.selectPeer()
+	}
+
+	n.mu.RLock()
+	peers := make([]*Peer, 0, len(n.peers))
+	for _, p := range n.peers {
+		if !p.IsClosed() {
+			peers = append(peers, p)
+		}
+	}
+	n.mu.RUnlock()
+
+	// Ищем пир, удовлетворяющий хотя бы одному правилу
+	for _, rule := range rules {
+		for _, p := range peers {
+			switch rule {
+			case "residential":
+				if p.IPType == "residential" {
+					return p
+				}
+			default:
+				// rule = страна ("US", "GB", "DE", ...)
+				if p.Country == rule {
+					return p
+				}
+			}
+		}
+	}
+
+	// Fallback: обычный выбор
+	return n.selectPeer()
 }
 
 // selectUpstreamPeer выбирает upstream пир (только исходящие соединения).
@@ -360,6 +448,41 @@ func (n *Node) connectToBootstrap() {
 	}
 }
 
+// connectToBootstrapOrCache — умный старт: bootstrap → peerCache → hardcoded fallback.
+// Если в конфиге нет адресов → пробуем кэш известных пиров → и только потом hardcoded.
+func (n *Node) connectToBootstrapOrCache() {
+	// Собираем адреса из конфига
+	addrs := make([]string, 0, 1+len(n.cfg.BootstrapAddrs))
+	if n.cfg.BootstrapAddr != "" {
+		addrs = append(addrs, n.cfg.BootstrapAddr)
+	}
+	addrs = append(addrs, n.cfg.BootstrapAddrs...)
+
+	// Если конфиг не пустой — используем его (стандартный путь)
+	if len(addrs) > 0 {
+		for _, addr := range addrs {
+			go n.connectToAddr(addr)
+		}
+		return
+	}
+
+	// Нет конфига → пробуем peer cache
+	cached := n.peerCache.KnownAddrs()
+	if len(cached) > 0 {
+		log.Printf("[dht] нет bootstrap в конфиге, используем %d пиров из кэша", len(cached))
+		for _, addr := range cached {
+			go n.connectToAddr(addr)
+		}
+		return
+	}
+
+	// Последний рубеж: hardcoded fallback адреса
+	log.Printf("[dht] кэш пуст, используем hardcoded bootstrap адреса")
+	for _, addr := range fallbackBootstrapAddrs {
+		go n.connectToAddr(addr)
+	}
+}
+
 // connectToAddr — постоянное соединение с одним адресом (переподключение).
 func (n *Node) connectToAddr(addr string) {
 	for {
@@ -443,13 +566,49 @@ func (n *Node) addPeer(p *Peer) {
 	n.peers[p.nodeID] = p
 	n.mu.Unlock()
 
-	// Keepalive: отправляем MsgPing каждые 25с чтобы QUIC не разрывал idle соединение
+	// Keepalive: отправляем MsgPing каждые 25с + измеряем RTT
 	go p.runKeepalive(n.ctx)
+
+	// Сохраняем пира в кэш (для DHT — рой выживает без VDS)
+	remoteAddr := p.conn.RemoteAddr().String()
+	go n.peerCache.Add(remoteAddr, hex.EncodeToString(p.nodeID[:]))
+
+	// Геолокация: определяем страну и тип IP асинхронно
+	go func() {
+		remoteIP := extractIP(remoteAddr)
+		country, ipType := lookupGeo(remoteIP)
+		p.Country = country
+		p.IPType = ipType
+		if country != "" {
+			log.Printf("[geo] пир %s: %s (%s)", p.NodeIDShort(), country, ipType)
+		}
+	}()
 
 	// Bootstrap/relay анонсирует список пиров новому узлу
 	if n.cfg.Mode == "bootstrap" || n.cfg.Mode == "relay" {
 		go n.announceToPeer(p)
 	}
+
+	// Client: сообщаем bootstrap о готовности к обратному туннелю
+	if n.cfg.Mode == "client" && p.isOutgoing {
+		go n.startRelayReady(n.ctx, p)
+	}
+}
+
+// extractIP извлекает IP из "host:port" строки.
+func extractIP(addr string) string {
+	// IPv6: "[::1]:port" → "::1"
+	if strings.HasPrefix(addr, "[") {
+		end := strings.LastIndex(addr, "]")
+		if end > 0 {
+			return addr[1:end]
+		}
+	}
+	// IPv4/hostname: "1.2.3.4:port" → "1.2.3.4"
+	if i := strings.LastIndex(addr, ":"); i > 0 {
+		return addr[:i]
+	}
+	return addr
 }
 
 func (n *Node) removePeer(p *Peer) {

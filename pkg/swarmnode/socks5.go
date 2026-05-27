@@ -58,8 +58,18 @@ func (s *socks5Server) handleConn(ctx context.Context, conn net.Conn) {
 		return
 	}
 
-	// Выбираем пир для маршрутизации (round-robin)
-	peer := s.node.selectPeer()
+	// Выбираем пир для маршрутизации (гео-маршрутизация → latency-first → round-robin)
+	// Извлекаем домен из target для гео-проверки ("host:port" → "host")
+	domain := target
+	if i := len(target) - 1; i > 0 {
+		for j := len(target) - 1; j >= 0; j-- {
+			if target[j] == ':' {
+				domain = target[:j]
+				break
+			}
+		}
+	}
+	peer := s.node.selectPeerForDomain(domain)
 	if peer == nil {
 		log.Printf("[socks5] нет доступных пиров для %s", target)
 		// Fallback: прямое подключение
@@ -75,7 +85,7 @@ func (s *socks5Server) handleConn(ctx context.Context, conn net.Conn) {
 	}
 	defer stream.Close()
 
-	log.Printf("[socks5] %s → [%s] → %s", conn.RemoteAddr(), peer.NodeIDShort(), target)
+	log.Printf("[socks5] %s → [%s] → %s (country=%s)", conn.RemoteAddr(), peer.NodeIDShort(), target, peer.Country)
 
 	// Двунаправленная передача с подсчётом байт.
 	// io.Copy заменён на ручные циклы чтобы считать трафик для мониторинга SkyEdge.
