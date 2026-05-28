@@ -370,19 +370,42 @@ func (n *Node) runTrafficSaver() {
 
 // ─── Internal ──────────────────────────────────────────────────────────────
 
+// satelliteQUICConfig возвращает quic.Config оптимизированный для высокого RTT (спутник).
+//
+// Ключевые параметры для BDP (Bandwidth-Delay Product):
+//   BDP = bandwidth × RTT = 5 Mbps × 1.8s ≈ 1.1 MB
+//   InitialStreamReceiveWindow должен быть ≥ BDP чтобы не ограничивать slow start.
+//   При дефолтных 512 KB: max = 512 KB / 1.8s ≈ 2.3 Mbps.
+//   При 4 MB: max = 4 MB / 1.8s ≈ 18 Mbps — спутниковый канал не станет узким местом.
+func satelliteQUICConfig() *quic.Config {
+	const (
+		_4MB  = 4 * 1024 * 1024
+		_16MB = 16 * 1024 * 1024
+		_8MB  = 8 * 1024 * 1024
+		_32MB = 32 * 1024 * 1024
+	)
+	return &quic.Config{
+		MaxIdleTimeout:       120 * time.Second,
+		HandshakeIdleTimeout: 30 * time.Second, // спутник: 3 RTT × 1900мс = 5.7с
+		KeepAlivePeriod:      10 * time.Second,
+		MaxIncomingStreams:    1000,
+		MaxIncomingUniStreams: -1,
+		// Flow control windows — критично для высокого RTT.
+		// Дефолт 512 KB ограничивает slow start до ~2 Mbps на спутнике.
+		InitialStreamReceiveWindow:     _4MB,
+		MaxStreamReceiveWindow:         _16MB,
+		InitialConnectionReceiveWindow: _8MB,
+		MaxConnectionReceiveWindow:     _32MB,
+	}
+}
+
 // startListener запускает QUIC listener.
 func (n *Node) startListener() error {
 	tlsCfg, err := generateTLSConfig()
 	if err != nil {
 		return err
 	}
-	qcfg := &quic.Config{
-		MaxIdleTimeout:       120 * time.Second, // keepalive пингует каждые 25с — 120с запас
-		HandshakeIdleTimeout: 30 * time.Second,  // спутник: 3 RTT × 1900мс = 5.7с → нужен запас
-		KeepAlivePeriod:      10 * time.Second,
-		MaxIncomingStreams:    1000,
-		MaxIncomingUniStreams: -1,
-	}
+	qcfg := satelliteQUICConfig()
 
 	ln, err := quic.ListenAddr(n.cfg.ListenAddr, tlsCfg, qcfg)
 	if err != nil {
@@ -514,11 +537,7 @@ func (n *Node) dialPeer(addr string) error {
 		InsecureSkipVerify: true, // TODO: проверка по NodeID
 		NextProtos:         []string{"swarm-v1"},
 	}
-	qcfg := &quic.Config{
-		MaxIdleTimeout:       120 * time.Second,
-		HandshakeIdleTimeout: 30 * time.Second, // спутник: рукопожатие может занять 5-6с
-		KeepAlivePeriod:      10 * time.Second,
-	}
+	qcfg := satelliteQUICConfig()
 
 	conn, err := quic.DialAddr(n.ctx, addr, tlsCfg, qcfg)
 	if err != nil {
