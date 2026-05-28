@@ -140,11 +140,15 @@ func (n *Node) Start() error {
 
 	switch n.cfg.Mode {
 	case "bootstrap":
-		// Bootstrap: только принимает входящие соединения
+		// Bootstrap: принимает входящие И подключается к другим bootstrap узлам
 		if err := n.startListener(); err != nil {
 			return fmt.Errorf("listener: %w", err)
 		}
 		go n.acceptLoop()
+		// Если заданы bootstrap_addrs — подключаемся к другим bootstrap узлам (mesh)
+		if len(n.cfg.BootstrapAddrs) > 0 || n.cfg.BootstrapAddr != "" {
+			go n.connectToBootstrapOrCache()
+		}
 
 	case "relay":
 		// Relay: принимает входящие И подключается к upstream (bootstrap/другой relay).
