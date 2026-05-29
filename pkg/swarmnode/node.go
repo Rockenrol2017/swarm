@@ -25,7 +25,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/narodnaya-set/swarm/pkg/swarmproto"
+	"github.com/Rockenrol2017/swarm/pkg/swarmproto"
 	"github.com/quic-go/quic-go"
 )
 

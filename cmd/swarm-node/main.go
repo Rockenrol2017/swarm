@@ -18,7 +18,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/narodnaya-set/swarm/pkg/swarmnode"
+	"github.com/Rockenrol2017/swarm/pkg/swarmnode"
 )
 
 func ensureDirs() {

@@ -1,6 +1,6 @@
 #!/bin/bash
 # S.W.A.R.M. — one-command join script
-# Usage: curl -fsSL https://raw.githubusercontent.com/narodnaya-set/swarm/main/install/join.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/Rockenrol2017/swarm/main/install/join.sh | bash
 # Or:    bash join.sh [--relay] [--tproxy]
 #
 # --relay   : также принимать чужой трафик (отдаёт 20% канала рою)
@@ -39,7 +39,7 @@ echo "==> S.W.A.R.M. установка (режим: $MODE, arch: $ARCH_TAG)"
 # 1. Скачать бинарник
 echo "==> Скачиваем swarm-node..."
 curl -fsSL -o /tmp/swarm-node \
-  "https://github.com/narodnaya-set/swarm/releases/latest/download/swarm-node-$ARCH_TAG"
+  "https://github.com/Rockenrol2017/swarm/releases/latest/download/swarm-node-$ARCH_TAG"
 chmod +x /tmp/swarm-node
 
 # Проверка

@@ -25,11 +25,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/narodnaya-set/swarm/internal/config"
-	"github.com/narodnaya-set/swarm/internal/killswitch"
-	"github.com/narodnaya-set/swarm/internal/proxy"
-	"github.com/narodnaya-set/swarm/internal/tun"
-	"github.com/narodnaya-set/swarm/internal/web"
+	"github.com/Rockenrol2017/swarm/internal/config"
+	"github.com/Rockenrol2017/swarm/internal/killswitch"
+	"github.com/Rockenrol2017/swarm/internal/proxy"
+	"github.com/Rockenrol2017/swarm/internal/tun"
+	"github.com/Rockenrol2017/swarm/internal/web"
 )
 
 const (

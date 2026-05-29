@@ -1,6 +1,6 @@
 [Unit]
 Description=S.W.A.R.M. Core Service — Secure Worldwide Anonymous Routing Mesh
-Documentation=https://github.com/narodnaya-set/swarm
+Documentation=https://github.com/Rockenrol2017/swarm
 After=network-online.target
 Wants=network-online.target
 # Перезапускаться после системных зависимостей

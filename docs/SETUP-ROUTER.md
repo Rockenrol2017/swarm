@@ -26,7 +26,7 @@ All LAN devices (phones, TVs, PCs, consoles)
 ```bash
 # Download the latest binary for Linux amd64
 curl -Lo /usr/local/bin/swarm-node \
-  https://github.com/narodnaya-set/swarm/releases/latest/download/swarm-node-linux-amd64
+  https://github.com/Rockenrol2017/swarm/releases/latest/download/swarm-node-linux-amd64
 chmod +x /usr/local/bin/swarm-node
 
 # Grant TPROXY capability (required for transparent proxy, no root needed at runtime)
@@ -35,7 +35,7 @@ sudo setcap cap_net_admin=+ep /usr/local/bin/swarm-node
 
 > **Build from source:**
 > ```bash
-> git clone https://github.com/narodnaya-set/swarm
+> git clone https://github.com/Rockenrol2017/swarm
 > cd swarm/src
 > go build -o /usr/local/bin/swarm-node ./cmd/swarm-node/
 > sudo setcap cap_net_admin=+ep /usr/local/bin/swarm-node

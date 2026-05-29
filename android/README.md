@@ -69,7 +69,7 @@ gomobile init
 
 # Build AAR library from swarmnode package
 gomobile bind -target android -o swarm-core.aar \
-    github.com/narodnaya-set/swarm/pkg/swarmnode
+    github.com/Rockenrol2017/swarm/pkg/swarmnode
 
 # Then build the Android project in android/ with Gradle
 ```

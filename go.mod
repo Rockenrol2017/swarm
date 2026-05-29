@@ -1,4 +1,4 @@
-module github.com/narodnaya-set/swarm
+module github.com/Rockenrol2017/swarm
 
 go 1.22
 

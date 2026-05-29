@@ -34,7 +34,7 @@ Your device
 
 ```bash
 curl -Lo /usr/local/bin/swarm-node \
-  https://github.com/narodnaya-set/swarm/releases/latest/download/swarm-node-linux-amd64
+  https://github.com/Rockenrol2017/swarm/releases/latest/download/swarm-node-linux-amd64
 chmod +x /usr/local/bin/swarm-node
 ```
 
@@ -76,14 +76,14 @@ System-wide (Linux): `export ALL_PROXY=socks5://127.0.0.1:1090`
 
 ```bash
 curl -Lo /usr/local/bin/swarm-node \
-  https://github.com/narodnaya-set/swarm/releases/latest/download/swarm-node-darwin-amd64
+  https://github.com/Rockenrol2017/swarm/releases/latest/download/swarm-node-darwin-amd64
 chmod +x /usr/local/bin/swarm-node
 ```
 
 Apple Silicon:
 ```bash
 curl -Lo /usr/local/bin/swarm-node \
-  https://github.com/narodnaya-set/swarm/releases/latest/download/swarm-node-darwin-arm64
+  https://github.com/Rockenrol2017/swarm/releases/latest/download/swarm-node-darwin-arm64
 ```
 
 ### Configure and run
@@ -106,7 +106,7 @@ System Preferences → Network → Advanced → Proxies → SOCKS Proxy:
 
 ### Install
 
-Download from [Releases](https://github.com/narodnaya-set/swarm/releases):
+Download from [Releases](https://github.com/Rockenrol2017/swarm/releases):
 `swarm-node-windows-amd64.exe`
 
 Create config at `C:\swarm\node-config.json`:
