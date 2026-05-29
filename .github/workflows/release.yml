@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         include:
           - goos: linux
@@ -43,6 +44,9 @@ jobs:
         with:
           go-version: '1.22'
 
+      - name: Download dependencies
+        run: go mod download
+
       - name: Build
         env:
           GOOS: ${{ matrix.goos }}
@@ -50,6 +54,7 @@ jobs:
           GOARM: ${{ matrix.goarm }}
           CGO_ENABLED: 0
           GONOSUMDB: "*"
+          GOFLAGS: "-mod=mod"
         run: |
           go build -trimpath -ldflags="-s -w" \
             -o swarm-node-${{ matrix.suffix }} ./cmd/swarm-node/
