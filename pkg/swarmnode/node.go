@@ -85,6 +85,10 @@ type Node struct {
 	// Используется обратным туннелем для принятия решения о relay.
 	bw *BandwidthMonitor
 
+	// relayLimiter — глобальный rate limiter для входящих proxy-запросов.
+	// Защищает relay/bootstrap от DoS: 50 новых соединений/сек, burst 150.
+	relayLimiter *tokenBucket
+
 	// QUIC listener (только для relay/bootstrap режима)
 	listener *quic.Listener
 
@@ -103,7 +107,7 @@ func New(cfg *Config) (*Node, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Инициализируем peer cache — загружаем с диска если есть
-	cache := newPeerCache("/var/lib/swarm/peers.json", 500)
+	cache := newPeerCache("/var/lib/swarm/peers.json", 500, id)
 	if err := cache.Load(); err != nil {
 		log.Printf("[dht] пустой кэш пиров: %v", err)
 	} else {
@@ -111,15 +115,16 @@ func New(cfg *Config) (*Node, error) {
 	}
 
 	return &Node{
-		cfg:       cfg,
-		identity:  id,
-		peers:     make(map[[32]byte]*Peer),
-		startTime: time.Now(),
-		ctx:       ctx,
-		cancel:    cancel,
-		traffic:   newTrafficStore(cfg.TrafficFile),
-		peerCache: cache,
-		bw:        newBandwidthMonitor(),
+		cfg:          cfg,
+		identity:     id,
+		peers:        make(map[[32]byte]*Peer),
+		startTime:    time.Now(),
+		ctx:          ctx,
+		cancel:       cancel,
+		traffic:      newTrafficStore(cfg.TrafficFile),
+		peerCache:    cache,
+		bw:           newBandwidthMonitor(),
+		relayLimiter: newTokenBucket(50, 150), // 50 conn/s, burst 150
 	}, nil
 }
 

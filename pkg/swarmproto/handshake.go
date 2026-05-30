@@ -32,7 +32,13 @@ import (
 //	  sessionKey = HKDF(sharedSecret, ...)
 
 const (
-	HelloSize = 32 + 32 + 64 + 8 // 136 байт
+	// ProtoVersion — текущая версия протокола рукопожатия.
+	// Увеличивать при несовместимых изменениях формата Hello.
+	ProtoVersion uint8 = 1
+
+	// HelloSize — размер сериализованного ClientHello / ServerHello.
+	// Layout: [1 version][32 ephemeral][32 nodeID][64 sig][8 timestamp]
+	HelloSize = 1 + 32 + 32 + 64 + 8 // 137 байт
 )
 
 // NodeIdentity — долгосрочная идентификация узла в сети.
@@ -61,6 +67,7 @@ func (n *NodeIdentity) NodeID() [32]byte {
 
 // ClientHello — данные рукопожатия от клиента.
 type ClientHello struct {
+	Version      uint8    // ProtoVersion — версия протокола
 	EphemeralPub [32]byte // X25519 ephemeral pubkey
 	NodeID       [32]byte // Ed25519 pubkey клиента
 	Signature    [64]byte // Ed25519(EphemeralPub || timestamp)
@@ -69,6 +76,7 @@ type ClientHello struct {
 
 // ServerHello — ответ сервера.
 type ServerHello struct {
+	Version      uint8    // ProtoVersion — версия протокола
 	EphemeralPub [32]byte // X25519 ephemeral pubkey
 	NodeID       [32]byte // Ed25519 pubkey сервера
 	Signature    [64]byte // Ed25519(EphemeralPub || clientEphemeral || timestamp)
@@ -92,6 +100,7 @@ func BuildClientHello(id *NodeIdentity) (*ClientHello, *ecdh.PrivateKey, error) 
 	}
 
 	hello := &ClientHello{
+		Version:   ProtoVersion,
 		Timestamp: time.Now().UnixNano(),
 		NodeID:    id.NodeID(),
 	}
@@ -107,8 +116,13 @@ func BuildClientHello(id *NodeIdentity) (*ClientHello, *ecdh.PrivateKey, error) 
 	return hello, ephPriv, nil
 }
 
-// VerifyClientHello проверяет подпись ClientHello.
+// VerifyClientHello проверяет версию протокола и подпись ClientHello.
 func VerifyClientHello(hello *ClientHello) error {
+	// Проверяем версию протокола
+	if hello.Version != ProtoVersion {
+		return fmt.Errorf("unsupported proto version: got %d, want %d", hello.Version, ProtoVersion)
+	}
+
 	// Проверяем временную метку
 	ts := time.Unix(0, hello.Timestamp)
 	if skew := time.Since(ts).Abs(); skew > MaxClockSkew {
@@ -141,6 +155,7 @@ func BuildServerHello(id *NodeIdentity, clientHello *ClientHello) (
 	}
 
 	hello := &ServerHello{
+		Version:   ProtoVersion,
 		Timestamp: time.Now().UnixNano(),
 		NodeID:    id.NodeID(),
 	}
@@ -244,12 +259,14 @@ func deriveSessionCiphers(shared []byte, clientPub, serverPub [32]byte, isClient
 }
 
 // MarshalClientHello сериализует ClientHello в байты.
+// Layout: [1 version][32 ephemeral][32 nodeID][64 sig][8 timestamp]
 func MarshalClientHello(h *ClientHello) []byte {
 	buf := make([]byte, HelloSize)
-	copy(buf[:32], h.EphemeralPub[:])
-	copy(buf[32:64], h.NodeID[:])
-	copy(buf[64:128], h.Signature[:])
-	binary.BigEndian.PutUint64(buf[128:], uint64(h.Timestamp))
+	buf[0] = h.Version
+	copy(buf[1:33], h.EphemeralPub[:])
+	copy(buf[33:65], h.NodeID[:])
+	copy(buf[65:129], h.Signature[:])
+	binary.BigEndian.PutUint64(buf[129:], uint64(h.Timestamp))
 	return buf
 }
 
@@ -259,20 +276,23 @@ func UnmarshalClientHello(b []byte) (*ClientHello, error) {
 		return nil, fmt.Errorf("too short: %d < %d", len(b), HelloSize)
 	}
 	h := &ClientHello{}
-	copy(h.EphemeralPub[:], b[:32])
-	copy(h.NodeID[:], b[32:64])
-	copy(h.Signature[:], b[64:128])
-	h.Timestamp = int64(binary.BigEndian.Uint64(b[128:]))
+	h.Version = b[0]
+	copy(h.EphemeralPub[:], b[1:33])
+	copy(h.NodeID[:], b[33:65])
+	copy(h.Signature[:], b[65:129])
+	h.Timestamp = int64(binary.BigEndian.Uint64(b[129:]))
 	return h, nil
 }
 
 // MarshalServerHello сериализует ServerHello.
+// Layout: [1 version][32 ephemeral][32 nodeID][64 sig][8 timestamp]
 func MarshalServerHello(h *ServerHello) []byte {
 	buf := make([]byte, HelloSize)
-	copy(buf[:32], h.EphemeralPub[:])
-	copy(buf[32:64], h.NodeID[:])
-	copy(buf[64:128], h.Signature[:])
-	binary.BigEndian.PutUint64(buf[128:], uint64(h.Timestamp))
+	buf[0] = h.Version
+	copy(buf[1:33], h.EphemeralPub[:])
+	copy(buf[33:65], h.NodeID[:])
+	copy(buf[65:129], h.Signature[:])
+	binary.BigEndian.PutUint64(buf[129:], uint64(h.Timestamp))
 	return buf
 }
 
@@ -282,9 +302,10 @@ func UnmarshalServerHello(b []byte) (*ServerHello, error) {
 		return nil, fmt.Errorf("too short: %d < %d", len(b), HelloSize)
 	}
 	h := &ServerHello{}
-	copy(h.EphemeralPub[:], b[:32])
-	copy(h.NodeID[:], b[32:64])
-	copy(h.Signature[:], b[64:128])
-	h.Timestamp = int64(binary.BigEndian.Uint64(b[128:]))
+	h.Version = b[0]
+	copy(h.EphemeralPub[:], b[1:33])
+	copy(h.NodeID[:], b[33:65])
+	copy(h.Signature[:], b[65:129])
+	h.Timestamp = int64(binary.BigEndian.Uint64(b[129:]))
 	return h, nil
 }

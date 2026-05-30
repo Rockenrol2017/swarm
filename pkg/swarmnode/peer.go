@@ -54,6 +54,10 @@ type Peer struct {
 	Country string // "DE", "US", "SE", "RU", ... (ISO 3166-1 alpha-2)
 	IPType  string // "residential" | "datacenter" | "" (не определено)
 
+	// connLimiter — пер-пировый rate limiter для proxy-запросов.
+	// Защищает от DoS одной ноды: 10 новых соединений/сек, burst 30.
+	connLimiter *tokenBucket
+
 	// Статистика
 	bytesSent   atomic.Int64
 	bytesRecv   atomic.Int64
@@ -182,6 +186,21 @@ func (p *Peer) handleStream(stream quic.Stream) {
 // В режиме relay — форвардит через upstream (2-hop: client→relay→bootstrap→internet).
 // В режиме bootstrap/exit — диалит TCP напрямую.
 func (p *Peer) handleProxyRequest(stream quic.Stream, addr string) {
+	// Rate limiting — защита от DoS flood MsgConnect запросами.
+	// Два уровня: пер-пировый (connLimiter) и глобальный (node.relayLimiter).
+	if p.connLimiter != nil && !p.connLimiter.Allow() {
+		log.Printf("[peer %s] rate limit: слишком много соединений от пира, %s отклонён",
+			p.NodeIDShort(), addr)
+		stream.CancelRead(0)
+		return
+	}
+	if p.node != nil && p.node.relayLimiter != nil && !p.node.relayLimiter.Allow() {
+		log.Printf("[peer %s] rate limit: глобальный лимит relay, %s отклонён",
+			p.NodeIDShort(), addr)
+		stream.CancelRead(0)
+		return
+	}
+
 	log.Printf("[peer %s] CONNECT %s", p.NodeIDShort(), addr)
 
 	// Relay режим: форвардим через upstream а не диалим напрямую.
@@ -385,6 +404,7 @@ func performServerHandshake(ctx context.Context, conn quic.Connection,
 		connectedAt: time.Now(),
 		streams:     make(map[uint64]*ProxyStream),
 		isOutgoing:  false, // к нам подключились (client)
+		connLimiter: newTokenBucket(10, 30), // 10 conn/s, burst 30
 	}, nil
 	// node поле устанавливается в Node.addPeer
 }
@@ -433,6 +453,7 @@ func performClientHandshake(ctx context.Context, conn quic.Connection,
 		connectedAt: time.Now(),
 		streams:     make(map[uint64]*ProxyStream),
 		isOutgoing:  true, // мы диалили (upstream: bootstrap или relay)
+		connLimiter: newTokenBucket(10, 30), // 10 conn/s, burst 30
 	}, nil
 }
 
