@@ -30,6 +30,10 @@ const (
 	MsgRelayRequest MsgType = 0x08 // bootstrap просит клиента форвардировать поток
 	MsgRelayAccept  MsgType = 0x09 // клиент принял запрос relay
 	MsgRelayReject  MsgType = 0x0A // клиент перегружен, отклоняет запрос
+
+	// Kademlia DHT (v0.3)
+	MsgFindNode     MsgType = 0x0B // запрос k ближайших нод к target NodeID
+	MsgFindNodeResp MsgType = 0x0C // ответ: список k нод в формате MsgPeers
 )
 
 // Peer — активное соединение с другим узлом роя.
@@ -173,6 +177,19 @@ func (p *Peer) handleStream(stream quic.Stream) {
 		// Bootstrap просит нас форвардировать трафик (на client)
 		if p.node != nil {
 			p.node.handleRelayRequest(p, payload)
+		}
+
+	case MsgFindNode:
+		// Kademlia FIND_NODE RPC: ищем k ближайших нод к target из локальной таблицы.
+		// Выполняется на стороне получателя запроса — отвечаем без сетевых запросов.
+		if p.node != nil && p.node.dht != nil {
+			target, err := unmarshalFindNode(payload)
+			if err != nil {
+				log.Printf("[peer %s] MsgFindNode parse error: %v", p.NodeIDShort(), err)
+				return
+			}
+			closest := p.node.dht.FindClosestLocal(target)
+			writeMsg(stream, p.sendCipher, MsgFindNodeResp, marshalFindNodeResp(closest)) //nolint:errcheck
 		}
 
 	default:
@@ -515,4 +532,35 @@ func readMsg(r io.Reader, cipher swarmproto.AEAD) (MsgType, []byte, error) {
 // writeConnectMsg записывает MsgConnect с адресом назначения.
 func writeConnectMsg(w io.Writer, cipher swarmproto.AEAD, addr string) error {
 	return writeMsg(w, cipher, MsgConnect, []byte(addr))
+}
+
+// ─── Kademlia RPC ─────────────────────────────────────────────────────────────
+
+// findNode выполняет Kademlia FIND_NODE RPC к этому пиру.
+// Отправляет MsgFindNode с target NodeID, ждёт MsgFindNodeResp.
+// Возвращает до k ближайших нод к target из routing table пира.
+// Вызывается KademliaDHT.sendFindNode во время итеративного lookup.
+func (p *Peer) findNode(ctx context.Context, target NodeID) ([]*PeerInfo, error) {
+	stream, err := p.conn.OpenStreamSync(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("open stream: %w", err)
+	}
+	defer stream.Close()
+
+	// Отправляем FIND_NODE запрос
+	if err := writeMsg(stream, p.sendCipher, MsgFindNode, marshalFindNode(target)); err != nil {
+		return nil, fmt.Errorf("write FindNode: %w", err)
+	}
+
+	// Ждём ответ от пира
+	msgType, payload, err := readMsg(stream, p.recvCipher)
+	if err != nil {
+		return nil, fmt.Errorf("read FindNodeResp: %w", err)
+	}
+	if msgType != MsgFindNodeResp {
+		return nil, fmt.Errorf("unexpected msg 0x%02x (want 0x%02x MsgFindNodeResp)",
+			msgType, MsgFindNodeResp)
+	}
+
+	return unmarshalFindNodeResp(payload)
 }

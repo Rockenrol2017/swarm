@@ -94,6 +94,11 @@ type Node struct {
 	// Защищает relay/bootstrap от DoS: 50 новых соединений/сек, burst 150.
 	relayLimiter *tokenBucket
 
+	// dht — Kademlia DHT routing table (v0.3, dual-stack с bootstrap VDS).
+	// Параллельно с bootstrap: DHT не заменяет VDS пока нод < 20.
+	// Заполняется по мере подключения пиров; используется для самостоятельного discovery.
+	dht *KademliaDHT
+
 	// QUIC listener (только для relay/bootstrap режима)
 	listener *quic.Listener
 
@@ -119,7 +124,7 @@ func New(cfg *Config) (*Node, error) {
 		log.Printf("[dht] загружено %d пиров из кэша", cache.Len())
 	}
 
-	return &Node{
+	n := &Node{
 		cfg:          cfg,
 		identity:     id,
 		peers:        make(map[[32]byte]*Peer),
@@ -131,7 +136,10 @@ func New(cfg *Config) (*Node, error) {
 		bw:           newBandwidthMonitor(),
 		ipLimiter:    newIPRateLimiter(5, 10),   // 5 conn/s per IP, burst 10 — до handshake
 		relayLimiter: newTokenBucket(50, 150),    // 50 conn/s global — после handshake
-	}, nil
+	}
+	// dht инициализируется отдельно: требует *Node обратную ссылку
+	n.dht = newKademliaDHT(n)
+	return n, nil
 }
 
 // NodeID возвращает hex-encoded ID узла.
@@ -148,6 +156,11 @@ func (n *Node) Start() error {
 
 	// Периодическое сохранение peer cache на диск
 	go n.peerCache.startPeriodicSave(n.ctx)
+
+	// DHT Kademlia: dual-stack peer discovery (v0.3).
+	// Запускаем параллельно с bootstrap VDS — заполняет routing table по мере подключения пиров.
+	// startDHT ждёт первого пира, потом делает bootstrap lookup.
+	go n.startDHT()
 
 	switch n.cfg.Mode {
 	case "bootstrap":
@@ -616,6 +629,9 @@ func (n *Node) addPeer(p *Peer) {
 	remoteAddr := p.conn.RemoteAddr().String()
 	go n.peerCache.Add(remoteAddr, hex.EncodeToString(p.nodeID[:]))
 
+	// Добавляем в Kademlia routing table (DHT dual-stack)
+	n.dht.AddPeer(&PeerInfo{NodeID: p.nodeID, Addr: remoteAddr})
+
 	// Геолокация: определяем страну и тип IP асинхронно
 	go func() {
 		remoteIP := extractIP(remoteAddr)
@@ -658,6 +674,8 @@ func (n *Node) removePeer(p *Peer) {
 	n.mu.Lock()
 	delete(n.peers, p.nodeID)
 	n.mu.Unlock()
+	// Убираем из Kademlia routing table
+	n.dht.RemovePeer(p.nodeID)
 }
 
 // ─── SOCKS5 ───────────────────────────────────────────────────────────────
@@ -755,4 +773,41 @@ func generateSelfSigned(key ed25519.PrivateKey) (tls.Certificate, error) {
 		Certificate: [][]byte{certDER},
 		PrivateKey:  key,
 	}, nil
+}
+
+// ─── DHT Kademlia (v0.3) ──────────────────────────────────────────────────────
+
+// startDHT запускает DHT Kademlia в dual-stack режиме.
+//
+// Dual-stack: DHT работает параллельно с bootstrap VDS.
+// Bootstrap VDS не отключается пока нод в DHT < 20 (константа в kademlia.go).
+//
+// Алгоритм запуска:
+//  1. Запускаем горутину периодического обновления routing table (каждые 2ч).
+//  2. Ждём пока хотя бы один пир попадёт в routing table (добавляется в addPeer).
+//  3. Выполняем начальный bootstrap lookup — находим ближайших к себе.
+//     Это заполняет таблицу и готовит DHT к самостоятельному discovery.
+func (n *Node) startDHT() {
+	// Периодическое обновление routing table — экономим трафик (2h вместо стандартных 1h)
+	go n.dht.startRefresh(n.ctx)
+
+	// Ждём появления первого пира в routing table перед bootstrap lookup.
+	// Без хотя бы одного пира lookup бессмысленен — нет к кому обращаться.
+	ticker := time.NewTicker(15 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-n.ctx.Done():
+			return
+		case <-ticker.C:
+			if n.dht.table.Size() == 0 {
+				continue // ещё нет пиров в DHT — ждём
+			}
+			// Есть пиры — выполняем bootstrap lookup (self-lookup заполняет routing table)
+			dhtCtx, cancel := context.WithTimeout(n.ctx, KademliaTimeout*5)
+			n.dht.Bootstrap(dhtCtx)
+			cancel()
+			return // первичный bootstrap выполнен, дальше startRefresh обновляет
+		}
+	}
 }
