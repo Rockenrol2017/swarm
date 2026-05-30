@@ -51,8 +51,9 @@ type NodeStatus struct {
 	// Гео-статистика (geo.go)
 	PeersByCountry map[string]int `json:"peers_by_country,omitempty"`
 
-	// DHT: количество известных пиров в кэше
-	CachedPeers int `json:"cached_peers,omitempty"`
+	// DHT: кэш и Kademlia routing table
+	CachedPeers    int `json:"cached_peers,omitempty"`
+	DHTRoutingSize int `json:"dht_routing_size,omitempty"` // нод в Kademlia routing table
 
 	Socks5Addr string `json:"socks5_addr,omitempty"`
 	TProxyAddr string `json:"tproxy_addr,omitempty"`
@@ -143,10 +144,14 @@ func (n *Node) handleStatus(w http.ResponseWriter, r *http.Request) {
 	// Статистика канала
 	rxMbps, txMbps, loadPct := n.bw.Stats()
 
-	// DHT кэш
+	// DHT: peers.json кэш + Kademlia routing table
 	cachedPeers := 0
 	if n.peerCache != nil {
 		cachedPeers = n.peerCache.Len()
+	}
+	dhtRouting := 0
+	if n.dht != nil {
+		dhtRouting = n.dht.table.Size()
 	}
 
 	status := NodeStatus{
@@ -165,7 +170,8 @@ func (n *Node) handleStatus(w http.ResponseWriter, r *http.Request) {
 		TProxyAddr:   n.cfg.TProxyAddr,
 		ListenAddr:   n.cfg.ListenAddr,
 		Bootstrap:    n.cfg.BootstrapAddr,
-		CachedPeers:  cachedPeers,
+		CachedPeers:    cachedPeers,
+		DHTRoutingSize: dhtRouting,
 	}
 	if n.cfg.SkyEdgeLimitGB > 0 {
 		status.LimitGB = n.cfg.SkyEdgeLimitGB
