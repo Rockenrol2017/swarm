@@ -85,6 +85,11 @@ type Node struct {
 	// Используется обратным туннелем для принятия решения о relay.
 	bw *BandwidthMonitor
 
+	// ipLimiter — IP-level rate limiter, проверяется ДО handshake.
+	// Защищает от CPU-exhaustion через тысячи дорогостоящих X25519 handshake.
+	// 5 новых соединений/сек на IP, burst 10.
+	ipLimiter *ipRateLimiter
+
 	// relayLimiter — глобальный rate limiter для входящих proxy-запросов.
 	// Защищает relay/bootstrap от DoS: 50 новых соединений/сек, burst 150.
 	relayLimiter *tokenBucket
@@ -124,7 +129,8 @@ func New(cfg *Config) (*Node, error) {
 		traffic:      newTrafficStore(cfg.TrafficFile),
 		peerCache:    cache,
 		bw:           newBandwidthMonitor(),
-		relayLimiter: newTokenBucket(50, 150), // 50 conn/s, burst 150
+		ipLimiter:    newIPRateLimiter(5, 10),   // 5 conn/s per IP, burst 10 — до handshake
+		relayLimiter: newTokenBucket(50, 150),    // 50 conn/s global — после handshake
 	}, nil
 }
 
@@ -439,7 +445,16 @@ func (n *Node) acceptLoop() {
 
 // handleIncoming обрабатывает входящее QUIC соединение.
 func (n *Node) handleIncoming(conn quic.Connection) {
-	remote := conn.RemoteAddr().String()
+	remote := conn.RemoteAddr()
+
+	// IP-level rate limit — ДО handshake.
+	// Блокируем flood ДО того как X25519+Ed25519 начнут грузить CPU.
+	if !n.ipLimiter.Allow(remote) {
+		log.Printf("[node] IP rate limit: %s отклонён до handshake", remote)
+		conn.CloseWithError(0x29, "rate limited") // 0x29 = application error
+		return
+	}
+
 	log.Printf("[node] Входящее соединение: %s", remote)
 
 	// Выполняем рукопожатие

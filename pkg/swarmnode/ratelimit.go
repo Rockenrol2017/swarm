@@ -1,21 +1,21 @@
 package swarmnode
 
-// ratelimit.go — простой token bucket для защиты relay от DoS.
+// ratelimit.go — rate limiting на двух уровнях.
 //
-// Проблема: злоумышленник может слать тысячи MsgConnect подряд, заставляя
-// relay-узел открывать тысячи TCP-соединений и расходовать все ресурсы.
+// Уровень 1: IP-level limiter (ipRateLimiter) — ПЕРЕД handshake.
+//   Защищает от CPU-exhaustion через дорогостоящий X25519+Ed25519 handshake.
+//   5 новых соединений/сек на IP, burst 10.
+//   Применяется в handleIncoming() ДО performServerHandshake().
 //
-// Решение: два уровня rate limiting:
-//   1. Глобальный (Node.relayLimiter) — суммарный поток от всех пиров.
-//   2. Пер-пир (Peer.connLimiter) — изолирует одного агрессивного клиента.
+// Уровень 2: Stream-level limiters — ПОСЛЕ handshake.
+//   Защищает relay от DoS через тысячи MsgConnect.
+//   - Глобальный (Node.relayLimiter): 50 потоков/сек, burst 150
+//   - Пер-пир (Peer.connLimiter): 10 потоков/сек, burst 30
 //
-// Параметры выбраны под реальный трафик:
-//   - 50 потоков/сек глобально, burst 150 — достаточно для нормальной работы
-//   - 10 потоков/сек на пира, burst 30 — блокирует flood от одной ноды
-//
-// Реализация — классический leaky bucket без внешних зависимостей.
+// Реализация — классический token bucket без внешних зависимостей.
 
 import (
+	"net"
 	"sync"
 	"time"
 )
@@ -59,4 +59,75 @@ func (tb *tokenBucket) Allow() bool {
 	}
 	tb.tokens -= 1.0
 	return true
+}
+
+// ─── IP-level rate limiter ────────────────────────────────────────────────────
+
+// ipEntry — запись о конкретном IP.
+type ipEntry struct {
+	bucket  *tokenBucket
+	lastSee time.Time
+}
+
+// ipRateLimiter — per-IP rate limiter с автоочисткой устаревших записей.
+// Применяется ДО handshake чтобы блокировать CPU-exhaustion атаки.
+type ipRateLimiter struct {
+	mu      sync.Mutex
+	entries map[string]*ipEntry
+	rate    float64
+	burst   float64
+}
+
+// newIPRateLimiter создаёт IP-level limiter.
+// rate — новых соединений/сек на один IP, burst — максимальный всплеск.
+func newIPRateLimiter(rate, burst float64) *ipRateLimiter {
+	rl := &ipRateLimiter{
+		entries: make(map[string]*ipEntry),
+		rate:    rate,
+		burst:   burst,
+	}
+	go rl.cleanupLoop()
+	return rl
+}
+
+// Allow проверяет лимит для удалённого адреса (net.Addr или строка "ip:port").
+// Возвращает false если IP превысил лимит.
+func (rl *ipRateLimiter) Allow(addr net.Addr) bool {
+	ip := extractIP(addr)
+
+	rl.mu.Lock()
+	e, ok := rl.entries[ip]
+	if !ok {
+		e = &ipEntry{bucket: newTokenBucket(rl.rate, rl.burst)}
+		rl.entries[ip] = e
+	}
+	e.lastSee = time.Now()
+	rl.mu.Unlock()
+
+	return e.bucket.Allow()
+}
+
+// cleanupLoop удаляет записи для IP которые не активны > 10 минут.
+func (rl *ipRateLimiter) cleanupLoop() {
+	ticker := time.NewTicker(5 * time.Minute)
+	defer ticker.Stop()
+	for range ticker.C {
+		cutoff := time.Now().Add(-10 * time.Minute)
+		rl.mu.Lock()
+		for ip, e := range rl.entries {
+			if e.lastSee.Before(cutoff) {
+				delete(rl.entries, ip)
+			}
+		}
+		rl.mu.Unlock()
+	}
+}
+
+// extractIP извлекает IP-адрес без порта из net.Addr.
+func extractIP(addr net.Addr) string {
+	host, _, err := net.SplitHostPort(addr.String())
+	if err != nil {
+		return addr.String() // fallback: весь адрес как ключ
+	}
+	return host
 }

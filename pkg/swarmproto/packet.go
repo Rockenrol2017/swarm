@@ -29,11 +29,17 @@ const (
 	Version = 1
 
 	// Размеры полей внешнего кадра
-	NoiseSize     = 4
-	LengthSize    = 4
-	NonceSize     = 32
-	MACSize       = 16
-	FrameOverhead = NoiseSize + LengthSize + NonceSize + MACSize
+	NoiseSize     = 4  // случайный шум в начале — DPI затруднение
+	LengthSize    = 4  // длина ciphertext
+	// NonceField = CryptoNonceSize + ObfNonceSize — поле nonce в wire format (32 байта total).
+	// ChaCha20-Poly1305 использует только первые 12 байт (CryptoNonceSize).
+	// Оставшиеся 20 байт (ObfNonceSize) — случайные, увеличивают энтропию кадра.
+	// Итого 32 байта random в nonce-поле делают трафик неотличимым от шума.
+	CryptoNonceSize = 12 // cipher.NonceSize() для ChaCha20-Poly1305
+	ObfNonceSize    = 20 // дополнительная случайная энтропия
+	NonceSize       = CryptoNonceSize + ObfNonceSize // 32 байта в wire format
+	MACSize         = 16
+	FrameOverhead   = NoiseSize + LengthSize + NonceSize + MACSize
 
 	// Размеры полей внутри plaintext payload
 	VersionSize   = 1
@@ -67,14 +73,15 @@ func Encode(f *Frame, cipher AEAD) ([]byte, error) {
 	copy(plain[9:41], f.SessionID[:])
 	copy(plain[41:], f.Data)
 
-	// Генерируем случайный nonce
+	// Генерируем nonce: первые CryptoNonceSize байт используются шифром,
+	// оставшиеся ObfNonceSize — случайная энтропия для затруднения DPI.
 	var nonce [NonceSize]byte
 	if _, err := rand.Read(nonce[:]); err != nil {
 		return nil, fmt.Errorf("rand nonce: %w", err)
 	}
 
-	// Шифруем
-	ciphertext := cipher.Seal(nil, nonce[:cipher.NonceSize()], plain, nil)
+	// Шифруем: явно используем только первые CryptoNonceSize байт
+	ciphertext := cipher.Seal(nil, nonce[:CryptoNonceSize], plain, nil)
 
 	// Случайный шум в начале кадра
 	var noise [NoiseSize]byte
@@ -117,8 +124,8 @@ func Decode(raw []byte, cipher AEAD) (*Frame, error) {
 	nonce := raw[NoiseSize+LengthSize : NoiseSize+LengthSize+NonceSize]
 	ciphertext := raw[NoiseSize+LengthSize+NonceSize : NoiseSize+LengthSize+NonceSize+ctLen]
 
-	// Расшифровываем
-	plain, err := cipher.Open(nil, nonce[:cipher.NonceSize()], ciphertext, nil)
+	// Расшифровываем: используем только первые CryptoNonceSize байт
+	plain, err := cipher.Open(nil, nonce[:CryptoNonceSize], ciphertext, nil)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt: %w", err)
 	}
