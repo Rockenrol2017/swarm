@@ -15,7 +15,7 @@ package swarmnode
 // Реализация — классический token bucket без внешних зависимостей.
 
 import (
-	"net"
+	"net"    // net.Addr в сигнатуре Allow()
 	"sync"
 	"time"
 )
@@ -90,10 +90,11 @@ func newIPRateLimiter(rate, burst float64) *ipRateLimiter {
 	return rl
 }
 
-// Allow проверяет лимит для удалённого адреса (net.Addr или строка "ip:port").
+// Allow проверяет лимит для удалённого адреса.
 // Возвращает false если IP превысил лимит.
 func (rl *ipRateLimiter) Allow(addr net.Addr) bool {
-	ip := extractIP(addr)
+	// extractIP определён в node.go и принимает строку
+	ip := extractIP(addr.String())
 
 	rl.mu.Lock()
 	e, ok := rl.entries[ip]
@@ -123,11 +124,3 @@ func (rl *ipRateLimiter) cleanupLoop() {
 	}
 }
 
-// extractIP извлекает IP-адрес без порта из net.Addr.
-func extractIP(addr net.Addr) string {
-	host, _, err := net.SplitHostPort(addr.String())
-	if err != nil {
-		return addr.String() // fallback: весь адрес как ключ
-	}
-	return host
-}
